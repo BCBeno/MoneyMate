@@ -1,0 +1,12 @@
+export const CONFIG = {
+  APP_NAME: 'MoneyMate',
+  VERSION: '1.0.0',
+  DB_NAME: 'moneymate.db',
+  DB_VERSION: 1,
+  PIN_LENGTH: 4,
+  MAX_PIN_ATTEMPTS: 3,
+  COOLDOWN_SECONDS: 30,
+  DRIVE_FOLDER_NAME: 'MoneyMate Backups',
+  CURRENCY_CACHE_HOURS: 24,
+  DEFAULT_CURRENCY: 'RON',
+};

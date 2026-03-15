@@ -1,0 +1,40 @@
+export const colors = {
+  bg: {
+    primary:   '#0B0D12',
+    secondary: '#13161E',
+    tertiary:  '#1A1E2A',
+    elevated:  '#222840',
+  },
+  accent: {
+    primary:   '#00D4AA',
+    secondary: '#00A882',
+    muted:     'rgba(0,212,170,0.12)',
+  },
+  income:  '#34D399',
+  expense: '#F87171',
+  warning: '#FBBF24',
+  info:    '#60A5FA',
+  text: {
+    primary:   '#F1F5F9',
+    secondary: '#94A3B8',
+    muted:     '#475569',
+    inverse:   '#0B0D12',
+  },
+  border: {
+    default: '#1E2640',
+    subtle:  'rgba(30,38,64,0.6)',
+    accent:  'rgba(0,212,170,0.2)',
+  },
+  categories: {
+    food:          '#F97316',
+    transport:     '#3B82F6',
+    utilities:     '#8B5CF6',
+    health:        '#EF4444',
+    entertainment: '#EC4899',
+    shopping:      '#F59E0B',
+    education:     '#06B6D4',
+    investment:    '#10B981',
+    income:        '#34D399',
+    other:         '#6B7280',
+  },
+};
