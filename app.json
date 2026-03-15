@@ -28,6 +28,11 @@
           "faceIDPermission": "Allow MoneyMate to access Face ID."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3bcbb686-3673-4747-a857-842d0eab11e3"
+      }
+    }
   }
 }
