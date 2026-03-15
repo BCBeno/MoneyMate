@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MoneyMate — Personal Finance Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #09090B;
+  --bg1:      #111115;
+  --bg2:      #18181D;
+  --bg3:      #202028;
+  --bg4:      #2A2A35;
+  --teal:     #00D4AA;
+  --teal2:    #00B891;
+  --teal-dim: rgba(0,212,170,0.08);
+  --green:    #34D399;
+  --red:      #F87171;
+  --amber:    #FBBF24;
+  --blue:     #60A5FA;
+  --orange:   #FB923C;
+  --text0:    #FAFAFA;
+  --text1:    #A1A1AA;
+  --text2:    #52525B;
+  --border:   rgba(255,255,255,0.06);
+  --border2:  rgba(255,255,255,0.1);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text0);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+
+/* ─────────────────────────────── NOISE TEXTURE ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* ─────────────────────────────── LAYOUT ── */
+.wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+/* ─────────────────────────────── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: stretch;
+  position: relative;
+}
+
+.hero-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 80px 60px 80px 40px;
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+
+/* Animated gradient blob */
+.hero-blob {
+  position: absolute;
+  top: -100px;
+  left: -200px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,212,170,0.12) 0%, transparent 65%);
+  pointer-events: none;
+  animation: blobPulse 8s ease-in-out infinite;
+}
+@keyframes blobPulse {
+  0%, 100% { transform: scale(1) translate(0,0); opacity: 1; }
+  50%       { transform: scale(1.15) translate(20px, -20px); opacity: 0.7; }
+}
+
+.hero-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 48px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards 0.1s;
+}
+.wordmark-icon {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, var(--teal), var(--teal2));
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 32px rgba(0,212,170,0.3);
+}
+.wordmark-text {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  color: var(--text0);
+  letter-spacing: -0.3px;
+}
+.wordmark-text span { color: var(--teal); }
+
+.hero-headline {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(40px, 5vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 24px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards 0.25s;
+}
+.hero-headline em {
+  font-style: italic;
+  color: var(--teal);
+}
+
+.hero-sub {
+  font-size: 16px;
+  color: var(--text1);
+  font-weight: 300;
+  max-width: 440px;
+  line-height: 1.7;
+  margin-bottom: 40px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards 0.4s;
+}
+
+.hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards 0.55s;
+}
+.badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 5px 11px;
+  border-radius: 5px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+.b-teal   { background: rgba(0,212,170,0.1);   color: var(--teal);  border: 1px solid rgba(0,212,170,0.2); }
+.b-blue   { background: rgba(96,165,250,0.1);  color: var(--blue);  border: 1px solid rgba(96,165,250,0.2); }
+.b-green  { background: rgba(52,211,153,0.1);  color: var(--green); border: 1px solid rgba(52,211,153,0.2); }
+.b-amber  { background: rgba(251,191,36,0.1);  color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
+.b-orange { background: rgba(251,146,60,0.1);  color: var(--orange);border: 1px solid rgba(251,146,60,0.2); }
+
+/* ─────────────────────────────── PHONE COLUMN ── */
+.hero-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px 60px 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-right::before {
+  content: '';
+  position: absolute;
+  bottom: -100px; right: -100px;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(52,211,153,0.06), transparent 70%);
+}
+
+/* The three phones stacked/floating */
+.phones-showcase {
+  display: flex;
+  gap: -20px;
+  align-items: center;
+  position: relative;
+  height: 520px;
+  width: 360px;
+}
+
+.phone {
+  width: 185px;
+  background: #0D0F15;
+  border-radius: 30px;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+  position: absolute;
+  box-shadow:
+    0 40px 80px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,255,255,0.04) inset;
+}
+.phone::before {
+  content: '';
+  position: absolute;
+  top: 14px; left: 50%; transform: translateX(-50%);
+  width: 56px; height: 5px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+  z-index: 10;
+}
+.phone-screen { width: 100%; padding-top: 30px; }
+
+/* Phone positions */
+.phone-main {
+  left: 87px;
+  top: 0;
+  z-index: 3;
+  height: 400px;
+  animation: float1 6s ease-in-out infinite;
+}
+.phone-left {
+  left: 0;
+  top: 60px;
+  z-index: 2;
+  height: 360px;
+  opacity: 0.7;
+  animation: float2 6s ease-in-out infinite 1s;
+}
+.phone-right {
+  left: 174px;
+  top: 80px;
+  z-index: 2;
+  height: 360px;
+  opacity: 0.6;
+  animation: float3 6s ease-in-out infinite 2s;
+}
+
+@keyframes float1 { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-10px); } }
+@keyframes float2 { 0%,100%{ transform:translateY(0) rotate(-4deg); } 50%{ transform:translateY(-6px) rotate(-4deg); } }
+@keyframes float3 { 0%,100%{ transform:translateY(0) rotate(4deg); } 50%{ transform:translateY(-8px) rotate(4deg); } }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─────────────────────────────── PHONE CONTENT ── */
+/* HOME SCREEN */
+.ph-topbar { display:flex; align-items:center; justify-content:space-between; padding:0 10px 8px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.ph-arrow { font-size:16px; color:#52525B; }
+.ph-month { font-size:10px; font-weight:600; color:var(--text0); }
+
+.ph-balance {
+  margin:8px;
+  background:#0F1D20;
+  border-radius:12px;
+  border:1px solid rgba(0,212,170,0.18);
+  padding:10px 12px;
+  position:relative; overflow:hidden;
+}
+.ph-balance::after {
+  content:''; position:absolute; top:-20px; right:-20px;
+  width:60px; height:60px; border-radius:50%;
+  background:rgba(0,212,170,0.1);
+}
+.ph-bal-lbl { font-size:6px; color:#71717A; letter-spacing:0.5px; margin-bottom:2px; }
+.ph-bal-amt { font-size:20px; font-weight:700; color:var(--text0); letter-spacing:-0.5px; margin-bottom:7px; }
+.ph-bal-row { display:flex; gap:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:7px; }
+.ph-stat { flex:1; display:flex; align-items:center; gap:4px; }
+.ph-stat-lbl { font-size:6px; color:#71717A; }
+.ph-stat-val { font-size:9px; font-weight:700; }
+
+.ph-search { margin:6px 8px; height:26px; background:var(--bg2); border-radius:6px; border:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; padding:0 8px; gap:5px; }
+.ph-search-icon { font-size:8px; }
+.ph-search-text { font-size:8px; color:#52525B; }
+
+.ph-filters { display:flex; gap:4px; padding:0 8px 6px; }
+.ph-chip { font-size:7px; font-weight:500; padding:3px 7px; border-radius:4px; background:var(--bg2); border:1px solid rgba(255,255,255,0.06); color:#71717A; }
+.ph-chip.active { background:rgba(0,212,170,0.1); border-color:rgba(0,212,170,0.25); color:var(--teal); }
+
+.ph-list { padding:0 8px; }
+.ph-date-lbl { font-size:6px; font-weight:600; color:#3F3F46; text-transform:uppercase; letter-spacing:0.5px; margin:4px 0 3px; }
+.ph-tx { display:flex; align-items:center; gap:6px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.ph-tx-ico { width:22px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; }
+.ph-tx-info { flex:1; min-width:0; }
+.ph-tx-name { font-size:9px; font-weight:500; color:var(--text0); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ph-tx-cat  { font-size:7px; color:#52525B; }
+.ph-tx-right { text-align:right; }
+.ph-tx-amt  { font-size:9px; font-weight:600; }
+.ph-tx-cur  { font-size:6px; color:#52525B; }
+
+.ph-fab {
+  position:absolute; bottom:44px; right:10px;
+  width:28px; height:28px; border-radius:14px;
+  background:var(--teal);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; font-weight:300; color:#09090B;
+  box-shadow:0 4px 14px rgba(0,212,170,0.4);
+}
+
+.ph-tabbar { display:flex; background:var(--bg2); border-top:1px solid rgba(255,255,255,0.06); padding:5px 0 8px; margin-top:auto; }
+.ph-tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; }
+.ph-tab-ico { font-size:11px; }
+.ph-tab-lbl { font-size:5.5px; color:#52525B; }
+.ph-tab-lbl.on { color:var(--teal); }
+
+/* ADD SCREEN */
+.ph-add-hdr { display:flex; justify-content:space-between; align-items:center; padding:0 10px 8px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.ph-add-lbl { font-size:6.5px; color:var(--teal); font-weight:700; letter-spacing:1px; }
+.ph-close { width:16px; height:16px; border-radius:8px; background:var(--bg2); display:flex; align-items:center; justify-content:center; font-size:8px; color:#71717A; }
+.ph-toggle { display:flex; background:var(--bg2); border-radius:5px; margin:8px; padding:2px; border:1px solid rgba(255,255,255,0.06); }
+.ph-tog-btn { flex:1; text-align:center; padding:4px; border-radius:3px; font-size:7.5px; font-weight:600; color:#52525B; }
+.ph-tog-btn.exp { background:rgba(248,113,113,0.15); color:var(--red); }
+.ph-amt-card { margin:0 8px 6px; background:var(--bg2); border-radius:8px; border:1.5px solid rgba(248,113,113,0.35); padding:6px 10px; display:flex; align-items:flex-end; gap:5px; }
+.ph-amt-num { font-size:26px; font-weight:700; color:var(--red); letter-spacing:-1px; }
+.ph-amt-cur { font-size:10px; color:#71717A; padding-bottom:3px; font-weight:600; }
+.ph-field { display:flex; align-items:center; gap:6px; background:var(--bg2); border-radius:6px; margin:0 8px 5px; padding:6px 8px; border:1px solid rgba(255,255,255,0.06); }
+.ph-field-ico { font-size:10px; }
+.ph-field-lbl { font-size:6.5px; color:#52525B; width:38px; }
+.ph-field-val { flex:1; font-size:8px; color:var(--text0); font-weight:500; }
+.ph-field-arr { font-size:10px; color:#3F3F46; }
+.ph-save-btn { margin:8px; background:var(--red); border-radius:6px; padding:8px; text-align:center; font-size:10px; font-weight:700; color:#09090B; }
+
+/* REPORTS SCREEN */
+.ph-rep-lbl { font-size:6.5px; color:var(--teal); text-transform:uppercase; letter-spacing:1px; font-weight:700; padding:0 10px 6px; }
+.ph-periods { display:flex; gap:3px; padding:0 8px 7px; }
+.ph-period { flex:1; text-align:center; padding:4px; border-radius:5px; font-size:7px; font-weight:600; background:var(--bg2); border:1px solid rgba(255,255,255,0.06); color:#52525B; }
+.ph-period.on { background:rgba(0,212,170,0.1); border-color:rgba(0,212,170,0.25); color:var(--teal); }
+.ph-sum-row { display:flex; gap:4px; padding:0 8px 7px; }
+.ph-sum-card { flex:1; background:var(--bg2); border-radius:7px; padding:7px 8px; border-width:1px; border-style:solid; }
+.ph-sum-lbl { font-size:6.5px; color:#71717A; margin-bottom:2px; }
+.ph-sum-val { font-size:13px; font-weight:700; }
+.ph-chart-card { margin:0 8px 6px; background:var(--bg2); border-radius:8px; padding:7px 8px; border:1px solid rgba(255,255,255,0.06); }
+.ph-chart-ttl { font-size:7px; font-weight:600; color:#71717A; margin-bottom:5px; }
+.ph-bars { display:flex; align-items:flex-end; gap:3px; height:42px; }
+.ph-bg { display:flex; align-items:flex-end; gap:1px; flex:1; }
+.ph-bi { background:var(--green); opacity:0.85; border-radius:2px 2px 0 0; flex:1; }
+.ph-be { background:var(--red); opacity:0.85; border-radius:2px 2px 0 0; flex:1; }
+.ph-donut-row { display:flex; align-items:center; gap:7px; }
+.ph-dleg { flex:1; display:flex; flex-direction:column; gap:2.5px; }
+.ph-dleg-item { display:flex; align-items:center; gap:4px; }
+.ph-dleg-dot { width:5px; height:5px; border-radius:2.5px; flex-shrink:0; }
+.ph-dleg-txt { flex:1; font-size:7.5px; color:#A1A1AA; }
+.ph-dleg-pct { font-size:7.5px; font-weight:700; }
+
+/* ─────────────────────────────── SECTION WRAPPER ── */
+section {
+  padding: 100px 40px;
+  border-bottom: 1px solid var(--border);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+section:last-child { border-bottom: none; }
+
+.eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--teal);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.eyebrow::after {
+  content: '';
+  height: 1px;
+  width: 48px;
+  background: var(--teal);
+  opacity: 0.4;
+  display: inline-block;
+}
+
+h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -1.5px;
+  margin-bottom: 16px;
+}
+h2 span { color: var(--teal); }
+h2 em { font-style: italic; }
+
+.section-lead {
+  font-size: 16px;
+  color: var(--text1);
+  font-weight: 300;
+  max-width: 560px;
+  line-height: 1.7;
+}
+
+/* ─────────────────────────────── FEATURES ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 56px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--border);
+}
+.feature {
+  background: var(--bg1);
+  padding: 32px 28px;
+  transition: background 0.2s;
+  position: relative;
+}
+.feature:hover { background: var(--bg2); }
+.feature-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+.feature-icon { font-size: 28px; margin-bottom: 12px; display: block; }
+.feature-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text0);
+  margin-bottom: 8px;
+  letter-spacing: -0.2px;
+}
+.feature-desc {
+  font-size: 13px;
+  color: var(--text1);
+  line-height: 1.6;
+  font-weight: 300;
+}
+.feature-tag {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--teal);
+  background: var(--teal-dim);
+  border: 1px solid rgba(0,212,170,0.15);
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-top: 14px;
+}
+
+/* ─────────────────────────────── SPLIT SECTION ── */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+.split-reverse { direction: rtl; }
+.split-reverse > * { direction: ltr; }
+
+/* ─────────────────────────────── TECH STACK ── */
+.tech-list {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tech-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.tech-row:last-child { border-bottom: none; }
+.tech-row:hover { background: var(--bg2); }
+.tech-icon { font-size: 20px; width: 32px; text-align: center; flex-shrink: 0; }
+.tech-info { flex: 1; }
+.tech-name { font-size: 14px; font-weight: 500; color: var(--text0); }
+.tech-desc { font-size: 12px; color: var(--text1); font-weight: 300; margin-top: 1px; }
+.tech-ver {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+
+/* ─────────────────────────────── SCHEMA ── */
+.schema-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 40px;
+}
+.schema-card {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.schema-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg2);
+}
+.schema-table-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--teal);
+  font-weight: 500;
+}
+.schema-body { padding: 0; }
+.schema-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 12px;
+}
+.schema-field:last-child { border-bottom: none; }
+.sf-col {
+  font-family: 'DM Mono', monospace;
+  color: var(--text0);
+}
+.sf-type {
+  font-family: 'DM Mono', monospace;
+  color: var(--text2);
+  font-size: 11px;
+}
+.sf-pk {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  background: rgba(251,191,36,0.1);
+  color: var(--amber);
+  border: 1px solid rgba(251,191,36,0.2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 6px;
+}
+
+/* ─────────────────────────────── SETUP ── */
+.setup-steps {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.step {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 0;
+  position: relative;
+}
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 29px;
+  top: 52px;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--teal), transparent);
+  opacity: 0.3;
+}
+.step-num-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--teal);
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.step-body { padding: 0 0 40px 20px; }
+.step-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text0);
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+.step-desc { font-size: 14px; color: var(--text1); font-weight: 300; margin-bottom: 14px; }
+
+pre {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-x: auto;
+}
+.c-comment { color: var(--text2); }
+.c-cmd     { color: #E5E5EA; }
+.c-kw      { color: var(--teal); }
+.c-str     { color: var(--amber); }
+
+/* ─────────────────────────────── BIG PHONE ROW ── */
+.big-phones {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-end;
+  margin-top: 64px;
+  padding-bottom: 16px;
+}
+.big-phone-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  max-width: 220px;
+}
+.big-phone {
+  width: 100%;
+  background: #0D0F15;
+  border-radius: 32px;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  position: relative;
+}
+.big-phone::before {
+  content: '';
+  position: absolute;
+  top: 14px; left: 50%; transform: translateX(-50%);
+  width: 58px; height: 5px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  z-index: 10;
+}
+.big-phone-screen { padding-top: 30px; }
+.big-phone-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text2);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* SETTINGS phone content */
+.ph-set-lbl { font-size:6.5px; color:var(--teal); text-transform:uppercase; letter-spacing:1px; font-weight:700; padding:0 10px 8px; }
+.ph-set-section { margin:0 8px 8px; background:var(--bg2); border-radius:7px; border:1px solid rgba(255,255,255,0.06); overflow:hidden; }
+.ph-set-sec-title { font-size:6.5px; font-weight:600; color:#3F3F46; text-transform:uppercase; letter-spacing:0.7px; padding:5px 10px 4px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.ph-set-row { display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.04); }
+.ph-set-row:last-child { border-bottom:none; }
+.ph-set-ico { width:18px; height:18px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; }
+.ph-set-info { flex:1; }
+.ph-set-title { font-size:8px; font-weight:600; color:var(--text0); }
+.ph-set-sub   { font-size:6.5px; color:#71717A; }
+.ph-set-arrow { font-size:10px; color:#3F3F46; }
+.ph-toggle-on  { width:20px; height:11px; border-radius:6px; background:var(--teal); flex-shrink:0; }
+.ph-toggle-off { width:20px; height:11px; border-radius:6px; background:var(--bg3); border:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
+
+/* ─────────────────────────────── BOTTOM CTA ── */
+.cta-section {
+  padding: 100px 40px 80px;
+  max-width: 1100px;
+  margin: 0 auto;
+  text-align: center;
+}
+.cta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 6px 16px 6px 6px;
+  margin-bottom: 32px;
+}
+.cta-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px rgba(0,212,170,0.6); animation: dotPulse 2s ease-in-out infinite; }
+@keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.cta-pill-text { font-size: 12px; color: var(--text1); }
+.cta-h { font-family: 'DM Serif Display', serif; font-size: clamp(36px,5vw,60px); letter-spacing: -2px; line-height: 1.05; margin-bottom: 20px; }
+.cta-h span { color: var(--teal); }
+.cta-sub { font-size: 16px; color: var(--text1); font-weight: 300; max-width: 480px; margin: 0 auto 40px; line-height: 1.7; }
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--teal); color: #09090B;
+  font-size: 14px; font-weight: 600;
+  padding: 12px 24px; border-radius: 10px;
+  text-decoration: none;
+  transition: filter 0.15s, transform 0.15s;
+}
+.btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg2); color: var(--text0);
+  border: 1px solid var(--border2);
+  font-size: 14px; font-weight: 500;
+  padding: 12px 24px; border-radius: 10px;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.15s;
+}
+.btn-secondary:hover { background: var(--bg3); transform: translateY(-1px); }
+
+/* ─────────────────────────────── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer-brand {
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px;
+  color: var(--text0);
+}
+.footer-brand span { color: var(--teal); }
+.footer-right {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text2);
+  letter-spacing: 0.5px;
+}
+
+/* ─────────────────────────────── SCROLL REVEAL ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<div class="hero">
+  <div class="hero-left">
+    <div class="hero-blob"></div>
+
+    <div class="hero-wordmark">
+      <div class="wordmark-icon">💰</div>
+      <div class="wordmark-text">Money<span>Mate</span></div>
+    </div>
+
+    <h1 class="hero-headline">
+      Track every<br><em>transaction.</em><br>Understand your money.
+    </h1>
+
+    <p class="hero-sub">
+      A local-first personal finance app built with React Native and Expo.
+      Dark mode, SQLite, multi-currency — no accounts, no cloud, no subscriptions.
+    </p>
+
+    <div class="hero-badges">
+      <span class="badge b-teal">React Native 0.81</span>
+      <span class="badge b-blue">Expo SDK 54</span>
+      <span class="badge b-amber">TypeScript</span>
+      <span class="badge b-green">SQLite</span>
+      <span class="badge b-orange">Zustand v5</span>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="phones-showcase">
+
+      <!-- LEFT PHONE: Reports -->
+      <div class="phone phone-left">
+        <div class="phone-screen">
+          <div class="ph-rep-lbl">REPORTS</div>
+          <div class="ph-periods">
+            <div class="ph-period">1 month</div>
+            <div class="ph-period on">3 months</div>
+            <div class="ph-period">1 year</div>
+          </div>
+          <div class="ph-sum-row">
+            <div class="ph-sum-card" style="border-color:rgba(52,211,153,0.25)"><div class="ph-sum-lbl">Income</div><div class="ph-sum-val" style="color:#34D399">15.2k</div></div>
+            <div class="ph-sum-card" style="border-color:rgba(248,113,113,0.25)"><div class="ph-sum-lbl">Expenses</div><div class="ph-sum-val" style="color:#F87171">9.4k</div></div>
+          </div>
+          <div class="ph-chart-card">
+            <div class="ph-chart-ttl">Income vs Expenses</div>
+            <div class="ph-bars">
+              <div class="ph-bg"><div class="ph-bi" style="height:28px"></div><div class="ph-be" style="height:22px"></div></div>
+              <div class="ph-bg"><div class="ph-bi" style="height:36px"></div><div class="ph-be" style="height:38px"></div></div>
+              <div class="ph-bg"><div class="ph-bi" style="height:42px"></div><div class="ph-be" style="height:28px"></div></div>
+            </div>
+          </div>
+          <div class="ph-chart-card">
+            <div class="ph-chart-ttl">Expenses by category</div>
+            <div class="ph-donut-row">
+              <svg width="48" height="48" viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="16" fill="none" stroke="#202028" stroke-width="8"/>
+                <path d="M 24 8 A 16 16 0 0 1 40 24" fill="none" stroke="#FB923C" stroke-width="8" stroke-linecap="butt"/>
+                <path d="M 40 24 A 16 16 0 0 1 24 40" fill="none" stroke="#3B82F6" stroke-width="8" stroke-linecap="butt"/>
+                <path d="M 24 40 A 16 16 0 0 1 8 24" fill="none" stroke="#F87171" stroke-width="8" stroke-linecap="butt"/>
+                <path d="M 8 24 A 16 16 0 0 1 24 8" fill="none" stroke="#8B5CF6" stroke-width="8" stroke-linecap="butt"/>
+              </svg>
+              <div class="ph-dleg">
+                <div class="ph-dleg-item"><div class="ph-dleg-dot" style="background:#FB923C"></div><span class="ph-dleg-txt">Food</span><span class="ph-dleg-pct" style="color:#FB923C">35%</span></div>
+                <div class="ph-dleg-item"><div class="ph-dleg-dot" style="background:#3B82F6"></div><span class="ph-dleg-txt">Transport</span><span class="ph-dleg-pct" style="color:#3B82F6">25%</span></div>
+                <div class="ph-dleg-item"><div class="ph-dleg-dot" style="background:#F87171"></div><span class="ph-dleg-txt">Health</span><span class="ph-dleg-pct" style="color:#F87171">22%</span></div>
+                <div class="ph-dleg-item"><div class="ph-dleg-dot" style="background:#8B5CF6"></div><span class="ph-dleg-txt">Utilities</span><span class="ph-dleg-pct" style="color:#8B5CF6">18%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN PHONE: Home -->
+      <div class="phone phone-main">
+        <div class="phone-screen" style="position:relative">
+          <div class="ph-topbar">
+            <span class="ph-arrow">‹</span>
+            <span class="ph-month">March 2026 ▾</span>
+            <span class="ph-arrow">›</span>
+          </div>
+          <div class="ph-balance">
+            <div class="ph-bal-lbl">MONTHLY BALANCE</div>
+            <div class="ph-bal-amt">4,320.00</div>
+            <div class="ph-bal-row">
+              <div class="ph-stat">
+                <span style="font-size:10px;color:#34D399">↑</span>
+                <div><div class="ph-stat-lbl">Income</div><div class="ph-stat-val" style="color:#34D399">7,200</div></div>
+              </div>
+              <div style="width:1px;background:rgba(255,255,255,0.06);margin:0 8px"></div>
+              <div class="ph-stat">
+                <span style="font-size:10px;color:#F87171">↓</span>
+                <div><div class="ph-stat-lbl">Expenses</div><div class="ph-stat-val" style="color:#F87171">2,880</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="ph-search">
+            <span class="ph-search-icon">🔍</span>
+            <span class="ph-search-text">Search transactions...</span>
+          </div>
+          <div class="ph-filters">
+            <div class="ph-chip active">All</div>
+            <div class="ph-chip">↑ Income</div>
+            <div class="ph-chip">↓ Expenses</div>
+          </div>
+          <div class="ph-list">
+            <div class="ph-date-lbl">TODAY</div>
+            <div class="ph-tx">
+              <div class="ph-tx-ico" style="background:rgba(251,146,60,0.2)">🍽️</div>
+              <div class="ph-tx-info"><div class="ph-tx-name">Lidl</div><div class="ph-tx-cat">Food & Dining</div></div>
+              <div class="ph-tx-right"><div class="ph-tx-amt" style="color:#F87171">-58.55</div></div>
+            </div>
+            <div class="ph-tx">
+              <div class="ph-tx-ico" style="background:rgba(52,211,153,0.2)">💼</div>
+              <div class="ph-tx-info"><div class="ph-tx-name">Salary</div><div class="ph-tx-cat">Income</div></div>
+              <div class="ph-tx-right"><div class="ph-tx-amt" style="color:#34D399">+5,000</div></div>
+            </div>
+            <div class="ph-date-lbl" style="margin-top:5px">YESTERDAY</div>
+            <div class="ph-tx">
+              <div class="ph-tx-ico" style="background:rgba(59,130,246,0.2)">🚗</div>
+              <div class="ph-tx-info"><div class="ph-tx-name">Uber</div><div class="ph-tx-cat">Transport</div></div>
+              <div class="ph-tx-right"><div class="ph-tx-amt" style="color:#F87171">-24.00</div></div>
+            </div>
+            <div class="ph-tx">
+              <div class="ph-tx-ico" style="background:rgba(139,92,246,0.2)">💡</div>
+              <div class="ph-tx-info"><div class="ph-tx-name">Electricity</div><div class="ph-tx-cat">Utilities</div></div>
+              <div class="ph-tx-right"><div class="ph-tx-amt" style="color:#F87171">-187.30</div></div>
+            </div>
+          </div>
+          <div class="ph-fab">+</div>
+          <div class="ph-tabbar" style="margin-top:10px">
+            <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl on">Home</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl">Settings</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PHONE: Add Transaction -->
+      <div class="phone phone-right">
+        <div class="phone-screen">
+          <div class="ph-add-hdr">
+            <span class="ph-add-lbl">ADD TRANSACTION</span>
+            <div class="ph-close">✕</div>
+          </div>
+          <div class="ph-toggle">
+            <div class="ph-tog-btn exp">↓ Expense</div>
+            <div class="ph-tog-btn">↑ Income</div>
+          </div>
+          <div class="ph-amt-card">
+            <span class="ph-amt-num">58.55</span>
+            <span class="ph-amt-cur">$</span>
+          </div>
+          <div class="ph-field">
+            <span class="ph-field-ico">🍽️</span>
+            <span class="ph-field-lbl">Category</span>
+            <span class="ph-field-val">Food & Dining</span>
+            <span class="ph-field-arr">›</span>
+          </div>
+          <div class="ph-field">
+            <span class="ph-field-ico">📅</span>
+            <span class="ph-field-lbl">Date</span>
+            <span class="ph-field-val">March 15, 2026</span>
+            <span class="ph-field-arr">›</span>
+          </div>
+          <div class="ph-field">
+            <span class="ph-field-ico">💱</span>
+            <span class="ph-field-lbl">Currency</span>
+            <span class="ph-field-val">USD — US Dollar</span>
+            <span class="ph-field-arr">›</span>
+          </div>
+          <div class="ph-save-btn">✓  Save</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ FEATURES ═══════════════════ -->
+<section class="reveal">
+  <div class="eyebrow">Features</div>
+  <h2>Everything you need.<br><span>Nothing you don't.</span></h2>
+  <p class="section-lead">Built for people who want to understand where their money goes — without spreadsheets or subscriptions.</p>
+
+  <div class="features-grid">
+    <div class="feature">
+      <div class="feature-num">01</div>
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">Visual Reports</div>
+      <div class="feature-desc">Bar charts and donut charts showing income vs expenses. Tap any category to drill down into its transactions. Switch between 1 month, 3 months, or 1 year.</div>
+      <span class="feature-tag">react-native-svg</span>
+    </div>
+    <div class="feature">
+      <div class="feature-num">02</div>
+      <span class="feature-icon">💸</span>
+      <div class="feature-title">Smart Transactions</div>
+      <div class="feature-desc">Add income & expenses with a category picker, date picker, and multi-currency support. Tap any transaction to edit or delete it. Grouped by date, newest first.</div>
+      <span class="feature-tag">expo-sqlite v16</span>
+    </div>
+    <div class="feature">
+      <div class="feature-num">03</div>
+      <span class="feature-icon">💱</span>
+      <div class="feature-title">Multi-Currency</div>
+      <div class="feature-desc">Track transactions in USD, EUR, GBP, and more. All amounts stored with a base-currency equivalent so reports are always unified.</div>
+      <span class="feature-tag">10+ currencies</span>
+    </div>
+    <div class="feature">
+      <div class="feature-num">04</div>
+      <span class="feature-icon">🗄️</span>
+      <div class="feature-title">Import & Export</div>
+      <div class="feature-desc">Export as JSON, CSV, or raw SQLite. Import from JSON backups or .db files. Compatible with MoneyMate .mmbak backup files.</div>
+      <span class="feature-tag">expo-file-system</span>
+    </div>
+    <div class="feature">
+      <div class="feature-num">05</div>
+      <span class="feature-icon">🏷️</span>
+      <div class="feature-title">Custom Categories</div>
+      <div class="feature-desc">11 built-in categories to start. Create unlimited custom categories with any emoji icon and hex color. Delete ones you don't need.</div>
+      <span class="feature-tag">fully customizable</span>
+    </div>
+    <div class="feature">
+      <div class="feature-num">06</div>
+      <span class="feature-icon">🔐</span>
+      <div class="feature-title">PIN & Biometrics</div>
+      <div class="feature-desc">Protect your financial data with a 4-digit PIN or biometric authentication — Face ID or fingerprint. Locks automatically on app close.</div>
+      <span class="feature-tag">expo-local-authentication</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ BIG PHONES ROW ═══════════════════ -->
+<section class="reveal" style="padding-top:60px">
+  <div class="eyebrow">Screens</div>
+  <h2>Four screens.<br><em>Every view</em> <span>accounted for.</span></h2>
+
+  <div class="big-phones">
+
+    <!-- Home -->
+    <div class="big-phone-wrap">
+      <div class="big-phone" style="aspect-ratio:9/18">
+        <div class="big-phone-screen">
+          <div class="ph-topbar"><span class="ph-arrow">‹</span><span class="ph-month">March 2026 ▾</span><span class="ph-arrow">›</span></div>
+          <div class="ph-balance">
+            <div class="ph-bal-lbl">MONTHLY BALANCE</div>
+            <div class="ph-bal-amt" style="font-size:22px">+4,320.00</div>
+            <div class="ph-bal-row">
+              <div class="ph-stat"><span style="font-size:11px;color:#34D399">↑</span><div><div class="ph-stat-lbl">Income</div><div class="ph-stat-val" style="color:#34D399">7,200</div></div></div>
+              <div style="width:1px;background:rgba(255,255,255,0.06);margin:0 8px"></div>
+              <div class="ph-stat"><span style="font-size:11px;color:#F87171">↓</span><div><div class="ph-stat-lbl">Expenses</div><div class="ph-stat-val" style="color:#F87171">2,880</div></div></div>
+            </div>
+          </div>
+          <div class="ph-search"><span class="ph-search-icon">🔍</span><span class="ph-search-text">Search transactions...</span></div>
+          <div class="ph-filters">
+            <div class="ph-chip active">All</div>
+            <div class="ph-chip">↑ Income</div>
+            <div class="ph-chip">↓ Expenses</div>
+          </div>
+          <div class="ph-list">
+            <div class="ph-date-lbl">TODAY</div>
+            <div class="ph-tx"><div class="ph-tx-ico" style="background:rgba(251,146,60,0.2)">🍽️</div><div class="ph-tx-info"><div class="ph-tx-name">Lidl</div><div class="ph-tx-cat">Food & Dining</div></div><div class="ph-tx-right"><div class="ph-tx-amt" style="color:#F87171">-58.55</div></div></div>
+            <div class="ph-tx"><div class="ph-tx-ico" style="background:rgba(52,211,153,0.2)">💼</div><div class="ph-tx-info"><div class="ph-tx-name">Salary</div><div class="ph-tx-cat">Income</div></div><div class="ph-tx-right"><div class="ph-tx-amt" style="color:#34D399">+5,000</div></div></div>
+            <div class="ph-tx"><div class="ph-tx-ico" style="background:rgba(59,130,246,0.2)">🚗</div><div class="ph-tx-info"><div class="ph-tx-name">Uber</div><div class="ph-tx-cat">Transport</div></div><div class="ph-tx-right"><div class="ph-tx-amt" style="color:#F87171">-24.00</div></div></div>
+            <div class="ph-tx"><div class="ph-tx-ico" style="background:rgba(139,92,246,0.2)">💡</div><div class="ph-tx-info"><div class="ph-tx-name">Electricity</div><div class="ph-tx-cat">Utilities</div></div><div class="ph-tx-right"><div class="ph-tx-amt" style="color:#F87171">-187.30</div></div></div>
+          </div>
+          <div class="ph-fab">+</div>
+          <div class="ph-tabbar" style="margin-top:8px">
+            <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl on">Home</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl">Settings</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="big-phone-label">Home</div>
+    </div>
+
+    <!-- Add Transaction -->
+    <div class="big-phone-wrap">
+      <div class="big-phone" style="aspect-ratio:9/18">
+        <div class="big-phone-screen">
+          <div class="ph-add-hdr"><span class="ph-add-lbl">ADD TRANSACTION</span><div class="ph-close">✕</div></div>
+          <div class="ph-toggle"><div class="ph-tog-btn exp">↓ Expense</div><div class="ph-tog-btn">↑ Income</div></div>
+          <div class="ph-amt-card"><span class="ph-amt-num" style="font-size:32px">58.55</span><span class="ph-amt-cur">$</span></div>
+          <div class="ph-field"><span class="ph-field-ico">🍽️</span><span class="ph-field-lbl">Category</span><span class="ph-field-val">Food & Dining</span><span class="ph-field-arr">›</span></div>
+          <div class="ph-field"><span class="ph-field-ico">📅</span><span class="ph-field-lbl">Date</span><span class="ph-field-val">March 15, 2026</span><span class="ph-field-arr">›</span></div>
+          <div class="ph-field"><span class="ph-field-ico">💱</span><span class="ph-field-lbl">Currency</span><span class="ph-field-val">USD — US Dollar</span><span class="ph-field-arr">›</span></div>
+          <div style="height:24px"></div>
+          <div class="ph-save-btn" style="font-size:13px;padding:11px">✓  Save Transaction</div>
+        </div>
+      </div>
+      <div class="big-phone-label">Add Transaction</div>
+    </div>
+
+    <!-- Reports -->
+    <div class="big-phone-wrap">
+      <div class="big-phone" style="aspect-ratio:9/18">
+        <div class="big-phone-screen">
+          <div class="ph-rep-lbl">REPORTS</div>
+          <div class="ph-periods"><div class="ph-period">1 month</div><div class="ph-period on">3 months</div><div class="ph-period">1 year</div></div>
+          <div class="ph-sum-row">
+            <div class="ph-sum-card" style="border-color:rgba(52,211,153,0.25)"><div class="ph-sum-lbl">Income</div><div class="ph-sum-val" style="color:#34D399">15,240</div></div>
+            <div class="ph-sum-card" style="border-color:rgba(248,113,113,0.25)"><div class="ph-sum-lbl">Expenses</div><div class="ph-sum-val" style="color:#F87171">9,186</div></div>
+          </div>
+          <div class="ph-chart-card">
+            <div class="ph-chart-ttl">Income vs Expenses</div>
+            <div class="ph-bars"><div class="ph-bg"><div class="ph-bi" style="height:30px"></div><div class="ph-be" style="height:24px"></div></div><div class="ph-bg"><div class="ph-bi" style="height:38px"></div><div class="ph-be" style="height:42px"></div></div><div class="ph-bg"><div class="ph-bi" style="height:46px"></div><div class="ph-be" style="height:26px"></div></div></div>
+          </div>
+          <div class="ph-chart-card">
+            <div class="ph-chart-ttl">Expenses by category</div>
+            <div class="ph-donut-row">
+              <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="18" fill="none" stroke="#202028" stroke-width="8"/><path d="M 26 8 A 18 18 0 0 1 44 26" fill="none" stroke="#FB923C" stroke-width="8" stroke-linecap="butt"/><path d="M 44 26 A 18 18 0 0 1 26 44" fill="none" stroke="#3B82F6" stroke-width="8" stroke-linecap="butt"/><path d="M 26 44 A 18 18 0 0 1 8 26" fill="none" stroke="#F87171" stroke-width="8" stroke-linecap="butt"/><path d="M 8 26 A 18 18 0 0 1 26 8" fill="none" stroke="#8B5CF6" stroke-width="8" stroke-linecap="butt"/></svg>
+              <div class="ph-dleg">
+                <div class="ph-dleg-item"><div class="ph-dleg-dot" style="background:#FB923C"></div><span class="ph-dleg-txt">Food</span><span class="ph-dleg-pct" style="color:#FB923C">35%</span></div>
+                <div class="ph-dleg-item"><div class="ph-dleg-dot" style="background:#3B82F6"></div><span class="ph-dleg-txt">Transport</span><span class="ph-dleg-pct" style="color:#3B82F6">25%</span></div>
+                <div class="ph-dleg-item"><div class="ph-dleg-dot" style="background:#F87171"></div><span class="ph-dleg-txt">Health</span><span class="ph-dleg-pct" style="color:#F87171">22%</span></div>
+                <div class="ph-dleg-item"><div class="ph-dleg-dot" style="background:#8B5CF6"></div><span class="ph-dleg-txt">Utilities</span><span class="ph-dleg-pct" style="color:#8B5CF6">18%</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="ph-tabbar" style="margin-top:6px">
+            <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl">Home</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl on">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl">Settings</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="big-phone-label">Reports</div>
+    </div>
+
+    <!-- Settings -->
+    <div class="big-phone-wrap">
+      <div class="big-phone" style="aspect-ratio:9/18">
+        <div class="big-phone-screen">
+          <div class="ph-set-lbl">SETTINGS</div>
+          <div class="ph-set-section">
+            <div class="ph-set-sec-title">SECURITY</div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(248,113,113,0.15)">🔐</div><div class="ph-set-info"><div class="ph-set-title">PIN lock</div><div class="ph-set-sub">Enabled</div></div><div class="ph-toggle-on"></div></div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(96,165,250,0.15)">👆</div><div class="ph-set-info"><div class="ph-set-title">Biometrics</div><div class="ph-set-sub">Fingerprint / Face ID</div></div><div class="ph-toggle-off"></div></div>
+          </div>
+          <div class="ph-set-section">
+            <div class="ph-set-sec-title">EXPORT DATA</div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(0,212,170,0.15)">📤</div><div class="ph-set-info"><div class="ph-set-title">Export JSON</div><div class="ph-set-sub">Full backup</div></div><div class="ph-set-arrow">›</div></div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(52,211,153,0.15)">📊</div><div class="ph-set-info"><div class="ph-set-title">Export CSV</div><div class="ph-set-sub">Spreadsheet format</div></div><div class="ph-set-arrow">›</div></div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(96,165,250,0.15)">🗄️</div><div class="ph-set-info"><div class="ph-set-title">Export SQLite</div><div class="ph-set-sub">Full database (.db)</div></div><div class="ph-set-arrow">›</div></div>
+          </div>
+          <div class="ph-set-section">
+            <div class="ph-set-sec-title">PREFERENCES</div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(139,92,246,0.15)">💱</div><div class="ph-set-info"><div class="ph-set-title">Main currency</div><div class="ph-set-sub">USD</div></div><div class="ph-set-arrow">›</div></div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(20,184,166,0.15)">🏷️</div><div class="ph-set-info"><div class="ph-set-title">Categories</div><div class="ph-set-sub">Manage custom categories</div></div><div class="ph-set-arrow">›</div></div>
+          </div>
+          <div class="ph-tabbar" style="margin-top:auto">
+            <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl">Home</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl on">Settings</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="big-phone-label">Settings</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════ TECH STACK ═══════════════════ -->
+<section class="reveal">
+  <div class="split">
+    <div>
+      <div class="eyebrow">Stack</div>
+      <h2>Built on proven<br><span>foundations.</span></h2>
+      <p class="section-lead">Every dependency was chosen for stability and long-term maintainability. No unnecessary abstraction — just solid, auditable code.</p>
+    </div>
+    <div>
+      <div class="tech-list">
+        <div class="tech-row"><span class="tech-icon">⚛️</span><div class="tech-info"><div class="tech-name">React Native</div><div class="tech-desc">Cross-platform mobile framework</div></div><span class="tech-ver">0.81.5</span></div>
+        <div class="tech-row"><span class="tech-icon">📱</span><div class="tech-info"><div class="tech-name">Expo SDK</div><div class="tech-desc">Managed workflow, EAS build</div></div><span class="tech-ver">54</span></div>
+        <div class="tech-row"><span class="tech-icon">🗄️</span><div class="tech-info"><div class="tech-name">expo-sqlite</div><div class="tech-desc">Local-first SQLite database</div></div><span class="tech-ver">v16</span></div>
+        <div class="tech-row"><span class="tech-icon">🐻</span><div class="tech-info"><div class="tech-name">Zustand</div><div class="tech-desc">Minimal global state management</div></div><span class="tech-ver">v5</span></div>
+        <div class="tech-row"><span class="tech-icon">📐</span><div class="tech-info"><div class="tech-name">TypeScript</div><div class="tech-desc">Strict mode, full type safety</div></div><span class="tech-ver">strict</span></div>
+        <div class="tech-row"><span class="tech-icon">📊</span><div class="tech-info"><div class="tech-name">react-native-svg</div><div class="tech-desc">Custom charts — no chart libraries</div></div><span class="tech-ver">latest</span></div>
+        <div class="tech-row"><span class="tech-icon">🧭</span><div class="tech-info"><div class="tech-name">React Navigation</div><div class="tech-desc">Bottom tabs + stack navigator</div></div><span class="tech-ver">v7</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ DATABASE ═══════════════════ -->
+<section class="reveal">
+  <div class="eyebrow">Database</div>
+  <h2><em>Local-first.</em> <span>No accounts.</span><br>Your data is yours.</h2>
+  <p class="section-lead">Everything lives on-device in a SQLite file. No cloud sync, no user accounts, no subscriptions. Export at any time.</p>
+
+  <div class="schema-grid">
+    <div class="schema-card">
+      <div class="schema-head"><span style="font-size:14px">📋</span><span class="schema-table-name">transactions</span></div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-col">id<span class="sf-pk">PK</span></span><span class="sf-type">INTEGER</span></div>
+        <div class="schema-field"><span class="sf-col">type</span><span class="sf-type">'income' | 'expense'</span></div>
+        <div class="schema-field"><span class="sf-col">amount</span><span class="sf-type">REAL</span></div>
+        <div class="schema-field"><span class="sf-col">currency_code</span><span class="sf-type">TEXT → currencies</span></div>
+        <div class="schema-field"><span class="sf-col">amount_base</span><span class="sf-type">REAL</span></div>
+        <div class="schema-field"><span class="sf-col">category_id</span><span class="sf-type">INTEGER → categories</span></div>
+        <div class="schema-field"><span class="sf-col">date</span><span class="sf-type">DATE</span></div>
+        <div class="schema-field"><span class="sf-col">description</span><span class="sf-type">TEXT?</span></div>
+      </div>
+    </div>
+    <div class="schema-card">
+      <div class="schema-head"><span style="font-size:14px">🏷️</span><span class="schema-table-name">categories</span></div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-col">id<span class="sf-pk">PK</span></span><span class="sf-type">INTEGER</span></div>
+        <div class="schema-field"><span class="sf-col">name</span><span class="sf-type">TEXT</span></div>
+        <div class="schema-field"><span class="sf-col">icon</span><span class="sf-type">TEXT (emoji)</span></div>
+        <div class="schema-field"><span class="sf-col">color</span><span class="sf-type">TEXT (hex)</span></div>
+        <div class="schema-field"><span class="sf-col">type</span><span class="sf-type">'income' | 'expense'</span></div>
+        <div class="schema-field"><span class="sf-col">is_default</span><span class="sf-type">INTEGER 0|1</span></div>
+      </div>
+    </div>
+    <div class="schema-card">
+      <div class="schema-head"><span style="font-size:14px">💱</span><span class="schema-table-name">currencies</span></div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-col">code<span class="sf-pk">PK</span></span><span class="sf-type">TEXT</span></div>
+        <div class="schema-field"><span class="sf-col">name</span><span class="sf-type">TEXT</span></div>
+        <div class="schema-field"><span class="sf-col">symbol</span><span class="sf-type">TEXT</span></div>
+        <div class="schema-field"><span class="sf-col">rate_to_ron</span><span class="sf-type">REAL</span></div>
+        <div class="schema-field"><span class="sf-col">last_updated</span><span class="sf-type">DATETIME</span></div>
+      </div>
+    </div>
+    <div class="schema-card">
+      <div class="schema-head"><span style="font-size:14px">⚙️</span><span class="schema-table-name">settings</span></div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-col">key<span class="sf-pk">PK</span></span><span class="sf-type">TEXT</span></div>
+        <div class="schema-field"><span class="sf-col">value</span><span class="sf-type">TEXT</span></div>
+        <div class="schema-field"><span class="sf-col">updated_at</span><span class="sf-type">DATETIME</span></div>
+        <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,0.04)">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:#3F3F46;margin-bottom:6px;letter-spacing:0.5px">KEYS</div>
+          <div class="schema-field" style="padding:4px 0"><span class="sf-col" style="font-size:11px">currency</span><span class="sf-type">default 'USD'</span></div>
+          <div class="schema-field" style="padding:4px 0;border:none"><span class="sf-col" style="font-size:11px">pin_enabled</span><span class="sf-type">'0' | '1'</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ SETUP ═══════════════════ -->
+<section class="reveal">
+  <div class="eyebrow">Setup</div>
+  <h2>Running in <span>under 2 minutes.</span></h2>
+  <p class="section-lead">Requires Node.js 18+ and the Expo Go app on your device.</p>
+
+  <div class="setup-steps">
+    <div class="step">
+      <div class="step-num-wrap"><div class="step-num">1</div></div>
+      <div class="step-body">
+        <div class="step-title">Clone & install</div>
+        <div class="step-desc">Clone the repository and install all dependencies.</div>
+        <pre><span class="c-comment"># Clone the repo</span>
+<span class="c-cmd">git clone https://github.com/your-username/MoneyMate.git</span>
+<span class="c-cmd">cd MoneyMate</span>
+
+<span class="c-comment"># Install dependencies</span>
+<span class="c-cmd">npm install</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num-wrap"><div class="step-num">2</div></div>
+      <div class="step-body">
+        <div class="step-title">Start the dev server</div>
+        <div class="step-desc">Scan the QR code with Expo Go to open on your device, or use a simulator.</div>
+        <pre><span class="c-comment"># Start Expo (scan QR in Expo Go)</span>
+<span class="c-cmd">npx expo start</span>
+
+<span class="c-comment"># Android emulator</span>
+<span class="c-cmd">npx expo start --android</span>
+
+<span class="c-comment"># iOS simulator (macOS only)</span>
+<span class="c-cmd">npx expo start --ios</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num-wrap"><div class="step-num">3</div></div>
+      <div class="step-body">
+        <div class="step-title">Build for production</div>
+        <div class="step-desc">Use EAS Build to generate an APK or App Bundle for Google Play.</div>
+        <pre><span class="c-comment"># Install EAS CLI</span>
+<span class="c-cmd">npm install -g eas-cli && eas login</span>
+
+<span class="c-comment"># Preview APK (for testing)</span>
+<span class="c-cmd">eas build --platform android --profile preview</span>
+
+<span class="c-comment"># Production AAB (Google Play)</span>
+<span class="c-cmd">eas build --platform android --profile production</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ CTA ═══════════════════ -->
+<div class="cta-section reveal">
+  <div class="cta-pill">
+    <div class="cta-dot"></div>
+    <span class="cta-pill-text">Open source · MIT License</span>
+  </div>
+  <h1 class="cta-h">
+    Your money,<br>your <span>data.</span>
+  </h1>
+  <p class="cta-sub">
+    No accounts. No cloud. No subscriptions. Just a clean, fast app that helps you understand your finances.
+  </p>
+  <div class="cta-buttons">
+    <a href="#" class="btn-primary">⭐ Star on GitHub</a>
+    <a href="#" class="btn-secondary">📥 Download APK</a>
+  </div>
+</div>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer>
+  <div class="footer-brand">Money<span>Mate</span></div>
+  <div class="footer-right">MIT · React Native · Expo SDK 54 · SQLite</div>
+</footer>
+
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver(
+  entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+  { threshold: 0.1 }
+);
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
