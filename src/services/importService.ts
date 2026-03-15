@@ -11,7 +11,7 @@ export interface ImportResult {
 
 export async function importFromExternalDB(): Promise<ImportResult> {
   const picked = await DocumentPicker.getDocumentAsync({
-    type: '*/*',
+    type: ['application/json', 'application/octet-stream', 'application/x-sqlite3'],
     copyToCacheDirectory: true,
   });
 
@@ -19,14 +19,76 @@ export async function importFromExternalDB(): Promise<ImportResult> {
     return { transactions: 0, categories: 0, errors: ['Import cancelled'] };
   }
 
-  const asset    = picked.assets[0];
-  const fileName = asset.name ?? '';
-  const isJSON   = fileName.toLowerCase().endsWith('.json');
+  const asset = picked.assets[0];
+  const fileName = (asset.name ?? '').toLowerCase();
+  const mimeType = (asset.mimeType ?? '').toLowerCase();
+
+  const isJSON = fileName.endsWith('.json') || mimeType.includes('json');
+  const isSQLite =
+    fileName.endsWith('.db') ||
+    fileName.endsWith('.sqlite') ||
+    fileName.endsWith('.sqlite3') ||
+    mimeType.includes('sqlite') ||
+    mimeType === 'application/octet-stream';
 
   if (isJSON) {
     return importFromJSONFile(asset.uri);
   }
+  if (!isSQLite) {
+    return {
+      transactions: 0,
+      categories: 0,
+      errors: ['Unsupported file type. Please select a JSON or SQLite backup file.'],
+    };
+  }
   return importFromSQLiteFile(asset.uri);
+}
+
+async function insertTransactionIfMissing(db: SQLite.SQLiteDatabase, tx: {
+  type: string;
+  amount: number;
+  currencyCode: string;
+  amountRon: number;
+  categoryId: number;
+  description: string | null;
+  date: string;
+  note: string | null;
+}): Promise<boolean> {
+  const result = await db.runAsync(
+    `INSERT INTO transactions
+       (type, amount, currency_code, amount_ron, category_id, description, date, note)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?
+     WHERE NOT EXISTS (
+       SELECT 1 FROM transactions
+       WHERE type = ?
+         AND amount = ?
+         AND currency_code = ?
+         AND amount_ron = ?
+         AND category_id = ?
+         AND date = ?
+         AND IFNULL(description, '') = IFNULL(?, '')
+         AND IFNULL(note, '') = IFNULL(?, '')
+     )`,
+    [
+      tx.type,
+      tx.amount,
+      tx.currencyCode,
+      tx.amountRon,
+      tx.categoryId,
+      tx.description,
+      tx.date,
+      tx.note,
+      tx.type,
+      tx.amount,
+      tx.currencyCode,
+      tx.amountRon,
+      tx.categoryId,
+      tx.date,
+      tx.description,
+      tx.note,
+    ]
+  );
+  return (result.changes ?? 0) > 0;
 }
 
 // ── JSON import ───────────────────────────────────────────────────────────────
@@ -39,7 +101,7 @@ async function importFromJSONFile(uri: string): Promise<ImportResult> {
   try {
     raw = await FileSystem.readAsStringAsync(uri, { encoding: 'utf8' });
   } catch (e: any) {
-    return { transactions: 0, categories: 0, errors: [`Error citire fișier: ${e.message}`] };
+    return { transactions: 0, categories: 0, errors: [`File read error: ${e.message}`] };
   }
 
   let data: any;
@@ -49,25 +111,39 @@ async function importFromJSONFile(uri: string): Promise<ImportResult> {
     return { transactions: 0, categories: 0, errors: ['Invalid JSON file.'] };
   }
 
+  if (!data || typeof data !== 'object' || !Array.isArray(data.transactions)) {
+    return {
+      transactions: 0,
+      categories: 0,
+      errors: ['Invalid backup structure. Expected a JSON object with a transactions array.'],
+    };
+  }
+
   const db = await getDatabase();
 
   // Insert categories with their explicit IDs so foreign keys match
   if (Array.isArray(data.categories)) {
     for (const cat of data.categories) {
       try {
+        if (!cat || typeof cat.name !== 'string' || !cat.name.trim()) {
+          errors.push('Skipped category with missing name.');
+          continue;
+        }
+
+        let catResult;
         if (cat.id != null) {
           // Explicit ID — use INSERT OR IGNORE with explicit id column
-          await db.runAsync(
+          catResult = await db.runAsync(
             `INSERT OR IGNORE INTO categories (id, name, icon, color, type, is_default) VALUES (?, ?, ?, ?, ?, ?)`,
             [cat.id, cat.name, cat.icon ?? '📦', cat.color ?? '#6B7280', cat.type ?? 'expense', 0]
           );
         } else {
-          await db.runAsync(
+          catResult = await db.runAsync(
             `INSERT OR IGNORE INTO categories (name, icon, color, type, is_default) VALUES (?, ?, ?, ?, ?)`,
             [cat.name, cat.icon ?? '📦', cat.color ?? '#6B7280', cat.type ?? 'expense', 0]
           );
         }
-        importedCats++;
+        if ((catResult.changes ?? 0) > 0) importedCats++;
       } catch (e: any) { errors.push(`Cat "${cat.name}": ${e.message}`); }
     }
   }
@@ -76,22 +152,23 @@ async function importFromJSONFile(uri: string): Promise<ImportResult> {
   if (Array.isArray(data.transactions)) {
     for (const t of data.transactions) {
       try {
-        await db.runAsync(
-          `INSERT INTO transactions
-             (type, amount, currency_code, amount_ron, category_id, description, date, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            t.type,
-            t.amount,
-            t.currency_code ?? 'RON',
-            t.amount_ron ?? t.amount,
-            t.category_id ?? 1,
-            t.description || null,
-            t.date,
-            t.note || null,
-          ]
-        );
-        importedTx++;
+        const txType = t.type === 'income' ? 'income' : 'expense';
+        const amount = Number(t.amount ?? 0);
+        const amountRon = Number(t.amount_ron ?? amount);
+        const categoryId = Number(t.category_id ?? 1);
+        const date = typeof t.date === 'string' && t.date.trim() ? t.date : new Date().toISOString().substring(0, 10);
+
+        const inserted = await insertTransactionIfMissing(db, {
+          type: txType,
+          amount,
+          currencyCode: t.currency_code ?? 'RON',
+          amountRon,
+          categoryId,
+          description: t.description || null,
+          date,
+          note: t.note || null,
+        });
+        if (inserted) importedTx++;
       } catch (e: any) { errors.push(`Tx ${t.date}: ${e.message}`); }
     }
   }
@@ -111,10 +188,10 @@ async function importFromSQLiteFile(uri: string): Promise<ImportResult> {
   try {
     await FileSystem.copyAsync({ from: uri, to: tempPath });
   } catch (e: any) {
-    return { transactions: 0, categories: 0, errors: [`Error la copiere fișier: ${e.message}`] };
+    return { transactions: 0, categories: 0, errors: [`File copy error: ${e.message}`] };
   }
 
-  const srcDb  = await SQLite.openDatebaseAsync(tempName);
+  const srcDb  = await SQLite.openDatabaseAsync(tempName);
   const destDb = await getDatabase();
 
   try {
@@ -130,11 +207,11 @@ async function importFromSQLiteFile(uri: string): Promise<ImportResult> {
       try {
         const typeStr = cat.type === 0 ? 'income' : cat.type === 1 ? 'expense' : (cat.type ?? 'expense');
         const name    = cat.name_ro || cat.name || 'Category';
-        await destDb.runAsync(
+        const result = await destDb.runAsync(
           `INSERT OR IGNORE INTO categories (name, icon, color, type, is_default) VALUES (?, ?, ?, ?, 0)`,
           [name, cat.icon ?? '📦', cat.color ?? '#6B7280', typeStr]
         );
-        importedCats++;
+        if ((result.changes ?? 0) > 0) importedCats++;
       } catch (e: any) { errors.push(`Cat: ${e.message}`); }
     }
 
@@ -166,7 +243,7 @@ async function importFromSQLiteFile(uri: string): Promise<ImportResult> {
         }
         if (!dateStr) dateStr = new Date().toISOString().substring(0, 10);
 
-        const catName  = tx.cat_name_ro || tx.cat_name || 'Alte cheltuieli';
+        const catName  = tx.cat_name_ro || tx.cat_name || 'Other expenses';
         const catType  = tx.cat_type === 0 ? 'income' : 'expense';
         await destDb.runAsync(
           `INSERT OR IGNORE INTO categories (name, icon, color, type, is_default) VALUES (?, ?, ?, ?, 0)`,
@@ -178,14 +255,17 @@ async function importFromSQLiteFile(uri: string): Promise<ImportResult> {
         );
         const categoryId = catRow?.id ?? 1;
 
-        await destDb.runAsync(
-          `INSERT OR IGNORE INTO transactions
-             (type, amount, currency_code, amount_ron, category_id, description, date, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [typeStr, tx.amount ?? 0, 'RON', tx.amount_ron ?? tx.amount ?? 0, categoryId,
-           tx.description || null, dateStr, tx.note || null]
-        );
-        importedTx++;
+        const inserted = await insertTransactionIfMissing(destDb, {
+          type: typeStr,
+          amount: Number(tx.amount ?? 0),
+          currencyCode: 'RON',
+          amountRon: Number(tx.amount_ron ?? tx.amount ?? 0),
+          categoryId,
+          description: tx.description || null,
+          date: dateStr,
+          note: tx.note || null,
+        });
+        if (inserted) importedTx++;
       } catch (e: any) { errors.push(`Tx: ${e.message}`); }
     }
   } finally {

@@ -38,7 +38,7 @@ export default function PinSetupScreen({ onDone }: { onDone?: () => void }) {
   return (
     <SafeAreaView style={s.container} edges={['top','bottom']}>
       <Text style={s.title}>{step === 'create' ? 'Create PIN' : 'Confirm PIN'}</Text>
-      <Text style={s.sub}>{step === 'create' ? 'Alege un cod din 4 cifre' : 'Introdu PIN-ul din nou'}</Text>
+      <Text style={s.sub}>{step === 'create' ? 'Choose a 4-digit PIN' : 'Enter the PIN again'}</Text>
       <View style={s.dots}>
         {[0,1,2,3].map(i => (
           <View key={i} style={[s.dot, current.length > i && s.dotFilled]} />

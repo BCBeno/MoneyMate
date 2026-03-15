@@ -2,7 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Vibration } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../theme';
-import { verifyPin, isBiometricAvailable, authenticateWithBiometrics } from '../../services/securityService';
+import {
+  verifyPin,
+  isBiometricAvailable,
+  authenticateWithBiometrics,
+  incrementFailedAttempts,
+  setFailedAttempts,
+  getLockoutUntil,
+  setLockoutUntil,
+  clearFailedAttempts,
+  clearLockoutUntil,
+} from '../../services/securityService';
 import { useSettingsStore } from '../../store/slices/settingsSlice';
 import { CONFIG } from '../../constants/config';
 
@@ -10,24 +20,57 @@ const DIGITS = [['1','2','3'],['4','5','6'],['7','8','9'],['','0','⌫']];
 
 export default function PinLockScreen() {
   const [pin, setPin]         = useState('');
-  const [attempts, setAttempts] = useState(0);
   const [cooldown, setCooldown] = useState(0);
+  const [lockoutUntilTs, setLockoutUntilTs] = useState(0);
   const [error, setError]     = useState('');
   const { unlock, biometricEnabled } = useSettingsStore();
 
-  useEffect(() => { if (biometricEnabled) tryBiometric(); }, []);
+  useEffect(() => {
+    const init = async () => {
+      const lockoutUntil = await getLockoutUntil();
+      if (lockoutUntil > Date.now()) {
+        setLockoutUntilTs(lockoutUntil);
+      } else {
+        await clearLockoutUntil();
+      }
+      if (biometricEnabled) {
+        tryBiometric();
+      }
+    };
+    init();
+  }, [biometricEnabled]);
 
   useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setInterval(() => setCooldown(c => { if (c <= 1) { clearInterval(t); return 0; } return c-1; }), 1000);
+    if (lockoutUntilTs <= 0) {
+      setCooldown(0);
+      return;
+    }
+
+    const updateCooldown = async () => {
+      const remaining = Math.max(0, Math.ceil((lockoutUntilTs - Date.now()) / 1000));
+      setCooldown(remaining);
+      if (remaining === 0) {
+        setLockoutUntilTs(0);
+        await clearLockoutUntil();
+      }
+    };
+
+    updateCooldown();
+    const t = setInterval(() => {
+      updateCooldown();
+    }, 1000);
     return () => clearInterval(t);
-  }, [cooldown]);
+  }, [lockoutUntilTs]);
 
   const tryBiometric = async () => {
     const available = await isBiometricAvailable();
     if (!available) return;
     const ok = await authenticateWithBiometrics();
-    if (ok) unlock();
+    if (ok) {
+      await clearFailedAttempts();
+      await clearLockoutUntil();
+      unlock();
+    }
   };
 
   const handleDigit = (d: string) => {
@@ -39,14 +82,20 @@ export default function PinLockScreen() {
     if (next.length === 4) {
       setTimeout(async () => {
         const ok = await verifyPin(next);
-        if (ok) { unlock(); } else {
+        if (ok) {
+          await clearFailedAttempts();
+          await clearLockoutUntil();
+          unlock();
+        } else {
           Vibration.vibrate(400);
-          const na = attempts + 1;
-          setAttempts(na); setPin('');
+          const na = await incrementFailedAttempts();
+          setPin('');
           if (na >= CONFIG.MAX_PIN_ATTEMPTS) {
-            setCooldown(CONFIG.COOLDOWN_SECONDS);
+            const lockoutUntil = Date.now() + CONFIG.COOLDOWN_SECONDS * 1000;
+            await setLockoutUntil(lockoutUntil);
+            await setFailedAttempts(0);
+            setLockoutUntilTs(lockoutUntil);
             setError(`Too many attempts. Wait ${CONFIG.COOLDOWN_SECONDS}s`);
-            setAttempts(0);
           } else {
             setError(`Incorrect PIN. ${CONFIG.MAX_PIN_ATTEMPTS - na} attempts remaining`);
           }

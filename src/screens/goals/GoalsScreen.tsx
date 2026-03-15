@@ -5,12 +5,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
-import { Goal, GoalContribution, getContributions } from '../../database/repositories/goalRepository';
+import { Goal } from '../../database/repositories/goalRepository';
 import { useGoalsStore } from '../../store/slices/goalsSlice';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getDaysUntil, toISODate } from '../../utils/formatDate';
-import { format } from 'date-fns';
-import { ro } from 'date-fns/locale';
 import GoalDetailScreen from './GoalDetailScreen';
 import AddGoalScreen from './AddGoalScreen';
 
@@ -24,13 +22,13 @@ export default function GoalsScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        <Text style={s.screenLabel}>Obiective Economii</Text>
+        <Text style={s.screenLabel}>Savings Goals</Text>
 
         {goals.length === 0 && (
           <View style={s.emptyWrap}>
             <Text style={s.emptyEmoji}>🎯</Text>
-            <Text style={s.emptyTitle}>Niciun obiectiv</Text>
-            <Text style={s.emptyDesc}>Seteaza un obiectiv de economii și urmarește progresul.</Text>
+            <Text style={s.emptyTitle}>No goals yet</Text>
+            <Text style={s.emptyDesc}>Set a savings goal and track your progress.</Text>
           </View>
         )}
 
@@ -59,7 +57,7 @@ export default function GoalsScreen() {
                       : isPaused
                       ? 'Paused'
                       : days !== null
-                      ? (days > 0 ? `${days} zile ramase` : 'Deadline passed')
+                      ? (days > 0 ? `${days} days left` : 'Deadline passed')
                       : 'No deadline'}
                   </Text>
                 </View>
@@ -91,7 +89,7 @@ export default function GoalsScreen() {
 
         <TouchableOpacity style={s.addCard} onPress={() => setShowAdd(true)} activeOpacity={0.7}>
           <Text style={s.addIcon}>+</Text>
-          <Text style={s.addText}>Adauga obiectiv nou</Text>
+          <Text style={s.addText}>Add new goal</Text>
         </TouchableOpacity>
       </ScrollView>
 

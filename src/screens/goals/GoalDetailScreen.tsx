@@ -15,7 +15,7 @@ import { useGoalsStore } from '../../store/slices/goalsSlice';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { toISODate } from '../../utils/formatDate';
 import { format } from 'date-fns';
-import { ro } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import DatePickerModal from '../../components/common/DatePickerModal';
 import BottomSheetPicker, { PickerItem } from '../../components/common/BottomSheetPicker';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
@@ -72,7 +72,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
   const pct        = Math.min(100, (goal.current_amount / goal.target_amount) * 100);
   const deadlineFmt = goal.deadline
     ? (() => {
-        try { return format(new Date(goal.deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: ro }); }
+        try { return format(new Date(goal.deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: enUS }); }
         catch { return goal.deadline; }
       })()
     : 'No deadline';
@@ -94,7 +94,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
       setIsEditing(false);
       onClose();
     } catch (e) {
-      Alert.alert('Error', 'Nu s-a putut salva.');
+      Alert.alert('Error', 'Could not save.');
       console.error(e);
     } finally {
       setSaving(false);
@@ -104,7 +104,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
   // ── Add contribution ──
   const handleAddContrib = async () => {
     const amount = parseFloat(contribStr);
-    if (isNaN(amount) || amount <= 0) { Alert.alert('Suma invalida'); return; }
+    if (isNaN(amount) || amount <= 0) { Alert.alert('Invalid amount'); return; }
     setContribSaving(true);
     try {
       await contribute(goal.id, amount, toISODate(new Date()), contribNote || undefined);
@@ -153,11 +153,11 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
       <SafeAreaView style={s.container} edges={['top', 'bottom']}>
         <View style={s.header}>
           <TouchableOpacity onPress={onClose} style={s.headerBtn}>
-            <Text style={s.headerBtnText}>‹ Înapoi</Text>
+            <Text style={s.headerBtnText}>‹ Back</Text>
           </TouchableOpacity>
           <Text style={s.headerTitle} numberOfLines={1}>{goal.name}</Text>
           <TouchableOpacity onPress={() => setIsEditing(true)} style={s.headerBtn}>
-            <Text style={[s.headerBtnText, { textAlign: 'right' }]}>Editeaza</Text>
+            <Text style={[s.headerBtnText, { textAlign: 'right' }]}>Edit</Text>
           </TouchableOpacity>
         </View>
 
@@ -172,7 +172,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
               {formatCurrency(goal.current_amount, goal.currency_symbol ?? 'RON', 0)}
             </Text>
             <Text style={s.heroTarget}>
-              din {formatCurrency(goal.target_amount, goal.currency_symbol ?? 'RON', 0)}
+              of {formatCurrency(goal.target_amount, goal.currency_symbol ?? 'RON', 0)}
             </Text>
             <View style={s.progressBg}>
               <View style={[s.progressFill, { width: `${pct}%` as any, backgroundColor: goal.color }]} />
@@ -183,9 +183,9 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
           {/* Info rows */}
           <View style={s.fieldsCard}>
             <InfoRow label="Status" value={goal.status === 'active' ? 'Active' : goal.status === 'completed' ? 'Completed' : 'Paused'} />
-            <InfoRow label="Termen" value={deadlineFmt} />
-            <InfoRow label="Valuta" value={goal.currency_code} />
-            {!!goal.note && <InfoRow label="Nota" value={goal.note} isLast />}
+            <InfoRow label="Deadline" value={deadlineFmt} />
+            <InfoRow label="Currency" value={goal.currency_code} />
+            {!!goal.note && <InfoRow label="Note" value={goal.note} isLast />}
           </View>
 
           {/* Status toggle */}
@@ -195,13 +195,13 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
                 style={[s.statusBtn, goal.status === 'active' && s.statusBtnActive]}
                 onPress={() => setStatus(goal.id, 'active')}
               >
-                <Text style={[s.statusBtnText, goal.status === 'active' && { color: colors.accent.primary }]}>Activ</Text>
+                <Text style={[s.statusBtnText, goal.status === 'active' && { color: colors.accent.primary }]}>Active</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.statusBtn, goal.status === 'paused' && s.statusBtnPaused]}
                 onPress={() => setStatus(goal.id, 'paused')}
               >
-                <Text style={[s.statusBtnText, goal.status === 'paused' && { color: colors.warning }]}>Pauza</Text>
+                <Text style={[s.statusBtnText, goal.status === 'paused' && { color: colors.warning }]}>Paused</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -209,14 +209,14 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
           {/* Add contribution */}
           {goal.status === 'active' && (
             <TouchableOpacity style={s.contribBtn} onPress={() => setShowContrib(true)}>
-              <Text style={s.contribBtnText}>+ Adauga contribuție</Text>
+              <Text style={s.contribBtnText}>+ Add contribution</Text>
             </TouchableOpacity>
           )}
 
           {/* Contributions list */}
           {contributions.length > 0 && (
             <View style={s.section}>
-              <Text style={s.sectionTitle}>Contribuții</Text>
+              <Text style={s.sectionTitle}>Contributions</Text>
               {contributions.map(c => (
                 <TouchableOpacity
                   key={c.id}
@@ -226,7 +226,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
                 >
                   <View style={s.contribLeft}>
                     <Text style={s.contribDate}>
-                      {format(new Date(c.date + 'T12:00:00'), 'd MMM yyyy', { locale: ro })}
+                      {format(new Date(c.date + 'T12:00:00'), 'd MMM yyyy', { locale: enUS })}
                     </Text>
                     {!!c.note && <Text style={s.contribNote}>{c.note}</Text>}
                   </View>
@@ -235,13 +235,13 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
                   </Text>
                 </TouchableOpacity>
               ))}
-              <Text style={s.contribHint}>Apasa lung pe o contribuție pentru a o șterge</Text>
+              <Text style={s.contribHint}>Long press a contribution to delete it</Text>
             </View>
           )}
 
           {/* Delete */}
           <TouchableOpacity style={s.deleteBtn} onPress={handleDelete} activeOpacity={0.8}>
-            <Text style={s.deleteBtnText}>🗑  Șterge obiectivul</Text>
+            <Text style={s.deleteBtnText}>🗑  Delete goal</Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -250,7 +250,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
           <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setShowContrib(false)} />
           <View style={s.sheet}>
             <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>Adauga contribuție</Text>
+            <Text style={s.sheetTitle}>Add contribution</Text>
             <TextInput
               style={s.sheetInput}
               value={contribStr}
@@ -264,7 +264,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
               style={[s.sheetInput, { fontSize: 14, height: 44 }]}
               value={contribNote}
               onChangeText={setContribNote}
-              placeholder="Nota opționala"
+              placeholder="Optional note"
               placeholderTextColor={colors.text.muted}
             />
             <TouchableOpacity
@@ -272,7 +272,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
               onPress={handleAddContrib}
               disabled={contribSaving}
             >
-              <Text style={s.sheetBtnText}>{contribSaving ? '...' : 'Adauga'}</Text>
+              <Text style={s.sheetBtnText}>{contribSaving ? '...' : 'Add'}</Text>
             </TouchableOpacity>
           </View>
         </Modal>
@@ -287,12 +287,12 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => setIsEditing(false)} style={s.headerBtn}>
-          <Text style={s.headerBtnText}>Anuleaza</Text>
+          <Text style={s.headerBtnText}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Editeaza</Text>
+        <Text style={s.headerTitle}>Edit</Text>
         <TouchableOpacity onPress={handleSaveEdit} style={s.headerBtn} disabled={saving}>
           <Text style={[s.headerBtnText, { textAlign: 'right', color: colors.accent.primary, fontWeight: '600' }]}>
-            {saving ? '...' : 'Salveaza'}
+            {saving ? '...' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -301,11 +301,11 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         {/* Preview */}
         <View style={[s.preview, { backgroundColor: color + '22', borderColor: color }]}>
           <Text style={s.previewEmoji}>{icon}</Text>
-          <Text style={s.previewName}>{name || 'Obiectivul meu'}</Text>
+          <Text style={s.previewName}>{name || 'My goal'}</Text>
         </View>
 
         {/* Name */}
-        <Text style={s.label}>NUME</Text>
+        <Text style={s.label}>NAME</Text>
         <TextInput
           style={s.input}
           value={name}
@@ -315,7 +315,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         />
 
         {/* Target amount */}
-        <Text style={s.label}>SUMĂ ȚINTĂ</Text>
+        <Text style={s.label}>TARGET AMOUNT</Text>
         <View style={s.row}>
           <TextInput
             style={[s.input, { flex: 1 }]}
@@ -331,17 +331,17 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         </View>
 
         {/* Deadline picker */}
-        <Text style={s.label}>TERMEN</Text>
+        <Text style={s.label}>DEADLINE</Text>
         <TouchableOpacity style={s.input} onPress={() => setShowDeadlinePicker(true)}>
           <Text style={{ color: deadline ? colors.text.primary : colors.text.muted, fontSize: 15 }}>
             {deadline
-              ? (() => { try { return format(new Date(deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: ro }); } catch { return deadline; } })()
+              ? (() => { try { return format(new Date(deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: enUS }); } catch { return deadline; } })()
               : 'Select deadline (optional)'}
           </Text>
         </TouchableOpacity>
         {deadline !== '' && (
           <TouchableOpacity onPress={() => setDeadline('')} style={{ alignSelf: 'flex-start' }}>
-            <Text style={{ color: colors.expense, fontSize: 12, marginTop: -4 }}>✕ Șterge termenul</Text>
+            <Text style={{ color: colors.expense, fontSize: 12, marginTop: -4 }}>✕ Remove deadline</Text>
           </TouchableOpacity>
         )}
 
@@ -360,7 +360,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         </View>
 
         {/* Color */}
-        <Text style={s.label}>CULOARE</Text>
+        <Text style={s.label}>COLOR</Text>
         <View style={s.colorRow}>
           {GOAL_COLORS.map(c => (
             <TouchableOpacity
@@ -372,12 +372,12 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         </View>
 
         {/* Note */}
-        <Text style={s.label}>NOTĂ (opțional)</Text>
+        <Text style={s.label}>NOTE (optional)</Text>
         <TextInput
           style={[s.input, { height: 72, textAlignVertical: 'top', paddingTop: 12 }]}
           value={note}
           onChangeText={setNote}
-          placeholder="Nota adiționala..."
+          placeholder="Additional note..."
           placeholderTextColor={colors.text.muted}
           multiline
         />

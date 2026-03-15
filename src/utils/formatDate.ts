@@ -1,21 +1,21 @@
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
-import { ro } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 export function formatDate(date: string | Date): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
-  if (isToday(d)) return 'Azi';
-  if (isYesterday(d)) return 'Ieri';
-  return format(d, 'd MMM yyyy', { locale: ro });
+  if (isToday(d)) return 'Today';
+  if (isYesterday(d)) return 'Yesterday';
+  return format(d, 'd MMM yyyy', { locale: enUS });
 }
 
 export function formatDateShort(date: string | Date): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
-  return format(d, 'd MMM', { locale: ro });
+  return format(d, 'd MMM', { locale: enUS });
 }
 
 export function formatMonth(date: string | Date): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
-  return format(d, 'MMMM yyyy', { locale: ro });
+  return format(d, 'MMMM yyyy', { locale: enUS });
 }
 
 export function toISODate(date: Date): string {

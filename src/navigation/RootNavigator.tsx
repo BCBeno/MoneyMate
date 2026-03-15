@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import MainTabNavigator from './MainTabNavigator';
@@ -9,11 +10,26 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 const Stack = createStackNavigator();
 
 export default function RootNavigator() {
-  const { pinEnabled, isLocked, isLoading, loadSettings } = useSettingsStore();
+  const { pinEnabled, isLocked, isLoading, loadSettings, lock } = useSettingsStore();
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => { loadSettings(); }, []);
 
-  if (isLoading) return <LoadingSpinner message="Se încarcă..." />;
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      const prevState = appStateRef.current;
+      appStateRef.current = nextState;
+
+      if (!pinEnabled) return;
+      if (prevState === 'active' && (nextState === 'inactive' || nextState === 'background')) {
+        lock();
+      }
+    });
+
+    return () => sub.remove();
+  }, [pinEnabled, lock]);
+
+  if (isLoading) return <LoadingSpinner message="Loading..." />;
 
   return (
     <NavigationContainer>

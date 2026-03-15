@@ -46,20 +46,20 @@ export default function DashboardScreen() {
         {/* Balance card */}
         <View style={s.balanceCard}>
           <View style={s.balanceGlow} />
-          <Text style={s.balanceLabel}>SOLD TOTAL</Text>
+          <Text style={s.balanceLabel}>TOTAL BALANCE</Text>
           <Text style={s.balanceAmount}>{formatCurrency(balance, currency, 0)}</Text>
         </View>
 
         {/* Quick stats */}
         <View style={s.statsGrid}>
           <View style={s.statCard}>
-            <Text style={s.statLabel}>Venituri</Text>
+            <Text style={s.statLabel}>Income</Text>
             <Text style={[s.statAmount, { color: colors.income }]}>
               +{formatCurrency(income, currency, 0)}
             </Text>
           </View>
           <View style={s.statCard}>
-            <Text style={s.statLabel}>Cheltuieli</Text>
+            <Text style={s.statLabel}>Expenses</Text>
             <Text style={[s.statAmount, { color: colors.expense }]}>
               -{formatCurrency(expenses, currency, 0)}
             </Text>
@@ -69,7 +69,7 @@ export default function DashboardScreen() {
         {/* Goals */}
         {activeGoals.length > 0 && (
           <View style={s.section}>
-            <Text style={s.sectionTitle}>Obiective active</Text>
+            <Text style={s.sectionTitle}>Active goals</Text>
             {activeGoals.map(goal => {
               const pct = Math.min(100, (goal.current_amount / goal.target_amount) * 100);
               return (
@@ -97,9 +97,9 @@ export default function DashboardScreen() {
 
         {/* Recent transactions — tappable */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Recente</Text>
+          <Text style={s.sectionTitle}>Recent</Text>
           {recent.length === 0
-            ? <Text style={s.empty}>Nicio tranzacție această lună</Text>
+            ? <Text style={s.empty}>No transactions this month</Text>
             : recent.map(t => (
               <TouchableOpacity
                 key={t.id}

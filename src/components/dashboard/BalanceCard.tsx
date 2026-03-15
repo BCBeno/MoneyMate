@@ -15,7 +15,7 @@ export default function BalanceCard({ balance, income, expenses, symbol, month }
   const isPositive = balance >= 0;
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>SOLD TOTAL</Text>
+      <Text style={styles.label}>TOTAL BALANCE</Text>
       <Text style={[styles.amount, { color: isPositive ? colors.income : colors.expense }]}>
         {isPositive ? '' : '-'}{formatCurrency(Math.abs(balance), symbol)}
       </Text>
@@ -24,7 +24,7 @@ export default function BalanceCard({ balance, income, expenses, symbol, month }
         <View style={styles.stat}>
           <View style={[styles.dot, { backgroundColor: colors.income }]} />
           <View>
-            <Text style={styles.statLabel}>Venituri</Text>
+            <Text style={styles.statLabel}>Income</Text>
             <Text style={[styles.statAmount, { color: colors.income }]}>
               +{formatCurrency(income, symbol)}
             </Text>
@@ -34,7 +34,7 @@ export default function BalanceCard({ balance, income, expenses, symbol, month }
         <View style={styles.stat}>
           <View style={[styles.dot, { backgroundColor: colors.expense }]} />
           <View>
-            <Text style={styles.statLabel}>Cheltuieli</Text>
+            <Text style={styles.statLabel}>Expenses</Text>
             <Text style={[styles.statAmount, { color: colors.expense }]}>
               -{formatCurrency(expenses, symbol)}
             </Text>

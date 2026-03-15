@@ -31,7 +31,7 @@ export async function exportToCSV(): Promise<void> {
     ORDER BY t.date DESC
   `);
 
-  const header = 'Date,Type,Suma,Valuta,Suma RON,Descriere,Category,Nota\n';
+  const header = 'Date,Type,Amount,Currency,Amount RON,Description,Category,Note\n';
   const lines  = rows.map((r: any) =>
     [
       r.date,
@@ -45,7 +45,7 @@ export async function exportToCSV(): Promise<void> {
     ].join(',')
   ).join('\n');
 
-  const fileName = `MoneyMate_tranzactii_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+  const fileName = `MoneyMate_transactions_${format(new Date(), 'yyyy-MM-dd')}.csv`;
   const filePath = FileSystem.documentDirectory + fileName;
 
   await FileSystem.writeAsStringAsync(filePath, header + lines, { encoding: 'utf8' });

@@ -16,17 +16,17 @@ export default function QuickStats({ savingsRate, totalTransactions, avgExpense,
       <View style={styles.stat}>
         <Text style={styles.emoji}>📈</Text>
         <Text style={styles.value}>{savingsRate.toFixed(0)}%</Text>
-        <Text style={styles.label}>Economisire</Text>
+        <Text style={styles.label}>Savings</Text>
       </View>
       <View style={styles.stat}>
         <Text style={styles.emoji}>🔢</Text>
         <Text style={styles.value}>{totalTransactions}</Text>
-        <Text style={styles.label}>Tranzacții</Text>
+        <Text style={styles.label}>Transactions</Text>
       </View>
       <View style={styles.stat}>
         <Text style={styles.emoji}>📉</Text>
         <Text style={styles.value}>{formatCurrency(avgExpense, symbol, 0)}</Text>
-        <Text style={styles.label}>Medie/zi</Text>
+        <Text style={styles.label}>Avg/day</Text>
       </View>
     </View>
   );

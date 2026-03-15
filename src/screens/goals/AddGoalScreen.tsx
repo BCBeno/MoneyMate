@@ -11,7 +11,7 @@ import { toISODate } from '../../utils/formatDate';
 import DatePickerModal from '../../components/common/DatePickerModal';
 import BottomSheetPicker, { PickerItem } from '../../components/common/BottomSheetPicker';
 import { format } from 'date-fns';
-import { ro } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 const GOAL_ICONS  = ['🏠','🚗','✈️','💻','📱','🎓','💍','🏖️','💰','🏋️','🎸','📷','🎯','🛒','🐾'];
 const GOAL_COLORS = ['#00D4AA','#3B82F6','#F97316','#EC4899','#8B5CF6','#34D399','#F59E0B','#EF4444','#06B6D4','#10B981'];
@@ -39,7 +39,7 @@ export default function AddGoalScreen({ onClose }: Props) {
       await add({ name: name.trim(), target_amount: target, currency_code: currency, icon, color, deadline: deadline || undefined });
       onClose();
     } catch (e) {
-      Alert.alert('Error', 'Nu s-a putut salva obiectivul.');
+      Alert.alert('Error', 'Could not save goal.');
       console.error(e);
     } finally {
       setSaving(false);
@@ -51,7 +51,7 @@ export default function AddGoalScreen({ onClose }: Props) {
   }));
 
   const deadlineFmt = deadline
-    ? (() => { try { return format(new Date(deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: ro }); } catch { return deadline; } })()
+    ? (() => { try { return format(new Date(deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: enUS }); } catch { return deadline; } })()
     : 'Select (optional)';
 
   return (
@@ -60,7 +60,7 @@ export default function AddGoalScreen({ onClose }: Props) {
         <TouchableOpacity onPress={onClose} style={s.closeBtn}>
           <Text style={s.closeText}>✕</Text>
         </TouchableOpacity>
-        <Text style={s.title}>Obiectiv nou</Text>
+        <Text style={s.title}>New goal</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -68,10 +68,10 @@ export default function AddGoalScreen({ onClose }: Props) {
         {/* Preview */}
         <View style={[s.preview, { backgroundColor: color + '22', borderColor: color }]}>
           <Text style={s.previewEmoji}>{icon}</Text>
-          <Text style={s.previewName}>{name || 'Obiectivul meu'}</Text>
+          <Text style={s.previewName}>{name || 'My goal'}</Text>
         </View>
 
-        <Text style={s.label}>NUME</Text>
+        <Text style={s.label}>NAME</Text>
         <TextInput
           style={s.input}
           value={name}
@@ -80,7 +80,7 @@ export default function AddGoalScreen({ onClose }: Props) {
           placeholderTextColor={colors.text.muted}
         />
 
-        <Text style={s.label}>SUMĂ ȚINTĂ</Text>
+        <Text style={s.label}>TARGET AMOUNT</Text>
         <View style={s.row}>
           <TextInput
             style={[s.input, { flex: 1 }]}
@@ -95,7 +95,7 @@ export default function AddGoalScreen({ onClose }: Props) {
           </TouchableOpacity>
         </View>
 
-        <Text style={s.label}>TERMEN</Text>
+        <Text style={s.label}>DEADLINE</Text>
         <TouchableOpacity style={s.input} onPress={() => setShowDeadlinePicker(true)}>
           <Text style={{ color: deadline ? colors.text.primary : colors.text.muted, fontSize: 15 }}>
             {deadlineFmt}
@@ -103,7 +103,7 @@ export default function AddGoalScreen({ onClose }: Props) {
         </TouchableOpacity>
         {deadline !== '' && (
           <TouchableOpacity onPress={() => setDeadline('')} style={{ alignSelf: 'flex-start' }}>
-            <Text style={{ color: colors.expense, fontSize: 12, marginTop: -4 }}>✕ Șterge termenul</Text>
+            <Text style={{ color: colors.expense, fontSize: 12, marginTop: -4 }}>✕ Remove deadline</Text>
           </TouchableOpacity>
         )}
 
@@ -120,7 +120,7 @@ export default function AddGoalScreen({ onClose }: Props) {
           ))}
         </View>
 
-        <Text style={s.label}>CULOARE</Text>
+        <Text style={s.label}>COLOR</Text>
         <View style={s.colorRow}>
           {GOAL_COLORS.map(c => (
             <TouchableOpacity

@@ -16,9 +16,9 @@ export default function RecentTransactions({ transactions, onPress, onSeeAll }: 
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Text style={styles.title}>Tranzacții recente</Text>
+        <Text style={styles.title}>Recent transactions</Text>
         <TouchableOpacity onPress={onSeeAll}>
-          <Text style={styles.seeAll}>Vezi tot</Text>
+          <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
       {transactions.slice(0, 5).map(t => (
@@ -31,7 +31,7 @@ export default function RecentTransactions({ transactions, onPress, onSeeAll }: 
             <Text style={styles.date}>{formatDate(t.date)}</Text>
           </View>
           <Text style={[styles.amount, { color: t.type === 'income' ? colors.income : colors.expense }]}>
-            {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, t.currency_symbol ?? 'lei', 0)}
+            {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, t.currency_symbol ?? 'RON', 0)}
           </Text>
         </TouchableOpacity>
       ))}

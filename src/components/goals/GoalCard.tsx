@@ -14,12 +14,15 @@ interface Props {
 
 export default function GoalCard({ goal, onPress }: Props) {
   const progress = goal.current_amount / goal.target_amount;
-  const symbol = goal.currency_symbol ?? 'lei';
+  const symbol = goal.currency_symbol ?? 'RON';
   const daysLeft = goal.deadline ? getDaysUntil(goal.deadline) : null;
 
-  const statusColor = goal.status === 'completed' ? colors.income
-    : goal.status === 'paused' ? colors.warning : colors.accent.primary;
-  const statusLabel = goal.status === 'completed' ? 'Completat'
+  const statusVariant = goal.status === 'completed'
+    ? 'completed'
+    : goal.status === 'paused'
+      ? 'paused'
+      : 'active';
+  const statusLabel = goal.status === 'completed' ? 'Completed'
     : goal.status === 'paused' ? 'Paused' : 'Active';
 
   return (
@@ -31,15 +34,15 @@ export default function GoalCard({ goal, onPress }: Props) {
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>{goal.name}</Text>
           {daysLeft !== null && daysLeft > 0 && (
-            <Text style={styles.deadline}>⏳ {daysLeft} zile rămase</Text>
+            <Text style={styles.deadline}>⏳ {daysLeft} days left</Text>
           )}
         </View>
-        <Badge label={statusLabel} color={statusColor} />
+        <Badge label={statusLabel} variant={statusVariant} />
       </View>
       <ProgressBar progress={progress} color={goal.color} height={6} />
       <View style={styles.amounts}>
         <Text style={styles.current}>{formatCurrency(goal.current_amount, symbol, 0)}</Text>
-        <Text style={styles.target}>din {formatCurrency(goal.target_amount, symbol, 0)}</Text>
+        <Text style={styles.target}>of {formatCurrency(goal.target_amount, symbol, 0)}</Text>
         <Text style={[styles.pct, { color: goal.color }]}>{(progress * 100).toFixed(0)}%</Text>
       </View>
     </TouchableOpacity>

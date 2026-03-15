@@ -1,23 +1,23 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, radius } from '../../theme';
-import { useAppStore } from '../../store';
+import { useSettingsStore } from '../../store';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
 import Modal from '../../components/common/Modal';
 
 interface Props { visible: boolean; onClose: () => void; }
 
 export default function CurrencyScreen({ visible, onClose }: Props) {
-  const { preferredCurrency, setPreferredCurrency } = useAppStore();
+  const { currency, setCurrency } = useSettingsStore();
 
   return (
     <Modal visible={visible} onClose={onClose} title="Main currency">
       {DEFAULT_CURRENCIES.map(c => {
-        const isSelected = c.code === preferredCurrency;
+        const isSelected = c.code === currency;
         return (
           <TouchableOpacity key={c.code}
             style={[styles.item, isSelected && styles.itemSelected]}
-            onPress={() => { setPreferredCurrency(c.code); onClose(); }}
+            onPress={() => { setCurrency(c.code); onClose(); }}
             activeOpacity={0.7}
           >
             <View style={styles.left}>

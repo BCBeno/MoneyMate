@@ -20,7 +20,7 @@ import EmptyState from '../../components/common/EmptyState';
 import AddTransactionScreen from './AddTransactionScreen';
 import TransactionDetailScreen from './TransactionDetailScreen';
 import { format, subMonths, addMonths } from 'date-fns';
-import { ro } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 export default function TransactionsScreen() {
   const { transactions, load, currentMonth, setMonth } = useTransactionsStore();
@@ -57,9 +57,9 @@ export default function TransactionsScreen() {
     <SafeAreaView style={s.safe} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.screenLabel}>TRANZACȚII</Text>
+        <Text style={s.screenLabel}>TRANSACTIONS</Text>
         <TouchableOpacity style={s.addBtn} onPress={() => setShowAdd(true)}>
-          <Text style={s.addBtnText}>+ Adaugă</Text>
+          <Text style={s.addBtnText}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
@@ -69,7 +69,7 @@ export default function TransactionsScreen() {
           <Text style={s.navArrow}>‹</Text>
         </TouchableOpacity>
         <Text style={s.monthText}>
-          {format(new Date(currentMonth + '-01'), 'MMMM yyyy', { locale: ro })}
+          {format(new Date(currentMonth + '-01'), 'MMMM yyyy', { locale: enUS })}
         </Text>
         <TouchableOpacity onPress={() => navigateMonth(1)} style={s.navBtn}>
           <Text style={s.navArrow}>›</Text>
@@ -83,7 +83,7 @@ export default function TransactionsScreen() {
           style={s.searchInput}
           value={search}
           onChangeText={setSearch}
-          placeholder="Caută..."
+          placeholder="Search..."
           placeholderTextColor={colors.text.muted}
         />
         {search.length > 0 && (
@@ -102,7 +102,7 @@ export default function TransactionsScreen() {
             onPress={() => setFilterType(f)}
           >
             <Text style={[s.filterChipText, filterType === f && s.filterChipTextActive]}>
-              {f === 'all' ? 'Toate' : f === 'income' ? '↑ Venituri' : '↓ Cheltuieli'}
+              {f === 'all' ? 'All' : f === 'income' ? '↑ Income' : '↓ Expenses'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -112,9 +112,9 @@ export default function TransactionsScreen() {
       {sections.length === 0 ? (
         <EmptyState
           emoji="💳"
-          title="Nicio tranzacție"
-          description="Apasă + Adaugă pentru prima tranzacție."
-          actionLabel="+ Adaugă"
+          title="No transactions"
+          description="Tap + Add to create your first transaction."
+          actionLabel="+ Add"
           onAction={() => setShowAdd(true)}
         />
       ) : (

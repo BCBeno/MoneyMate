@@ -1,4 +1,4 @@
-import { getDatabase, resetDatabase } from './database';
+import { getDatabase } from './database';
 
 // Bump this when schema changes
 const SCHEMA_VERSION = 5;
@@ -8,25 +8,9 @@ let migrated = false;
 export async function runMigrations(): Promise<void> {
   if (migrated) return;
 
-  let db = await getDatabase();
+  const db = await getDatabase();
 
-  // Read stored schema version
-  let storedVersion = 0;
-  try {
-    const row = await db.getFirstAsync<{ value: string }>(
-      `SELECT value FROM settings WHERE key = 'schema_version'`
-    );
-    storedVersion = parseInt(row?.value ?? '0', 10);
-  } catch {
-    storedVersion = 0;
-  }
-
-  if (storedVersion < SCHEMA_VERSION) {
-    await resetDatabase();
-    db = await getDatabase();
-    await db.execAsync('PRAGMA journal_mode = WAL;');
-    await db.execAsync('PRAGMA foreign_keys = ON;');
-  }
+  // Intentionally non-destructive: never reset user data on version bumps.
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS settings (

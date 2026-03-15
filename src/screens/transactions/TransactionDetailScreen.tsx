@@ -161,7 +161,7 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
           </View>
 
           <TouchableOpacity style={s.deleteBtn} onPress={handleDelete} activeOpacity={0.8}>
-            <Text style={s.deleteBtnText}>🗑  Delete tranzacția</Text>
+            <Text style={s.deleteBtnText}>🗑  Delete transaction</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
