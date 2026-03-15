@@ -12,7 +12,7 @@
 ```
 
 **Personal finance tracker · Dark mode · SQLite · Multi-currency**
-> 📱 [**View full presentaion →**](https://bcbeno.github.io/MoneyMate)
+> 📱 [**View full presentation →**](https://bcbeno.github.io/MoneyMate)
 
 [![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?style=flat-square&logo=react)](https://reactnative.dev)
 [![Expo SDK](https://img.shields.io/badge/Expo_SDK-54-000020?style=flat-square&logo=expo)](https://expo.dev)
