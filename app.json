@@ -9,11 +9,13 @@
     "splash": {
       "backgroundColor": "#0B0D12"
     },
+    "icon": "./assets/icon.png",
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B0D12"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D1117"
       },
-      "package": "com.yourname.moneymate",
+      "package": "com.bcbeno.moneymate",
       "permissions": [
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT"
