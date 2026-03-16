@@ -8,6 +8,7 @@ import { colors } from '../../theme';
 import {
   Transaction,
   UpdateTransactionDto,
+  getTransactionById,
 } from '../../database/repositories/transactionRepository';
 import { useTransactionsStore } from '../../store/slices/transactionsSlice';
 import { getCategories } from '../../database/repositories/categoryRepository';
@@ -23,14 +24,19 @@ interface Props {
   transaction: Transaction;
   onClose: () => void;
   onDeleted: () => void;
+  onUpdated?: () => void;
 }
 
-export default function TransactionDetailScreen({ transaction, onClose, onDeleted }: Props) {
+export default function TransactionDetailScreen({ transaction, onClose, onDeleted, onUpdated }: Props) {
   const { update, remove } = useTransactionsStore();
+
+  // Live copy of transaction data — gets refreshed after save
+  const [current, setCurrent] = useState<Transaction>(transaction);
 
   const [isEditing, setIsEditing]   = useState(false);
   const [type, setType]             = useState<'income' | 'expense'>(transaction.type);
-  const [amountStr, setAmountStr] = useState(String(transaction.amount));
+  const [amountStr, setAmountStr]   = useState(String(transaction.amount));
+  const [description, setDescription] = useState(transaction.description ?? '');
   const [currency, setCurrency]     = useState(transaction.currency_code);
   const [categoryId, setCategoryId] = useState<number>(transaction.category_id);
   const [date, setDate]             = useState(transaction.date.substring(0, 10));
@@ -51,6 +57,7 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
     const valid = normalized.replace(/[^0-9.]/g, '');
     const parts = valid.split('.');
     if (parts.length > 2) return;
+    if (parts.length === 2 && parts[1].length > 2) return;
     setAmountStr(valid);
   };
 
@@ -66,11 +73,23 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
     try {
       const amount_ron = await convertToRON(num, currency);
       const dto: UpdateTransactionDto = {
-        type, amount: num, currency_code: currency,
-        amount_ron, category_id: categoryId, date,
+        type,
+        amount:        num,
+        currency_code: currency,
+        amount_ron,
+        category_id:   categoryId,
+        description:   description.trim() || undefined,
+        date,
       };
       await update(transaction.id, dto);
-      onClose();
+
+      // Fetch fresh data so view mode shows updated values immediately
+      const fresh = await getTransactionById(transaction.id);
+      if (fresh) setCurrent(fresh);
+
+      onUpdated?.();
+
+      setIsEditing(false); // switch back to view mode — no need to close
     } catch (e) {
       Alert.alert('Error', 'Could not save the changes.');
       console.error(e);
@@ -93,10 +112,14 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
     );
   };
 
-  const amountColor    = transaction.type === 'income' ? colors.income : colors.expense;
-  const dateFormatted  = (() => {
+  const amountColor   = current.type === 'income' ? colors.income : colors.expense;
+  const dateFormatted = (() => {
     try { return format(new Date(date + 'T12:00:00'), 'd MMMM yyyy'); }
     catch { return date; }
+  })();
+  const viewDateFormatted = (() => {
+    try { return format(new Date((current.date ?? date).substring(0, 10) + 'T12:00:00'), 'd MMMM yyyy'); }
+    catch { return current.date; }
   })();
 
   const selectedCategory = categories.find(c => c.id === categoryId);
@@ -109,7 +132,6 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
     key: c.code, label: c.code, sublabel: c.name, icon: c.symbol,
   }));
 
-
   // ── View mode ─────────────────────────────────────────────────────────────
   if (!isEditing) {
     return (
@@ -119,7 +141,19 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
             <Text style={s.headerBtnText}>‹ Back</Text>
           </TouchableOpacity>
           <Text style={s.headerTitle}>Details</Text>
-          <TouchableOpacity onPress={() => setIsEditing(true)} style={s.headerBtn}>
+          <TouchableOpacity
+            onPress={() => {
+              // Sync edit fields with current (possibly updated) data
+              setType(current.type);
+              setAmountStr(String(current.amount));
+              setDescription(current.description ?? '');
+              setCurrency(current.currency_code);
+              setCategoryId(current.category_id);
+              setDate((current.date ?? '').substring(0, 10));
+              setIsEditing(true);
+            }}
+            style={s.headerBtn}
+          >
             <Text style={[s.headerBtnText, { textAlign: 'right' }]}>Edit</Text>
           </TouchableOpacity>
         </View>
@@ -127,35 +161,32 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
         <ScrollView contentContainerStyle={s.viewBody} showsVerticalScrollIndicator={false}>
           {/* Hero */}
           <View style={s.heroCard}>
-            <View style={[s.heroIcon, { backgroundColor: (transaction.category_color ?? '#666') + '26' }]}>
-              <Text style={s.heroEmoji}>{transaction.category_icon ?? '💰'}</Text>
+            <View style={[s.heroIcon, { backgroundColor: (current.category_color ?? '#666') + '26' }]}>
+              <Text style={s.heroEmoji}>{current.category_icon ?? '💰'}</Text>
             </View>
-            <Text style={s.heroCategory}>{transaction.category_name}</Text>
+            <Text style={s.heroCategory}>{current.category_name}</Text>
             <Text style={[s.heroAmount, { color: amountColor }]}>
-              {transaction.type === 'income' ? '+' : '-'}
-              {formatCurrency(transaction.amount_ron, 'RON', 2)}
+              {current.type === 'income' ? '+' : '-'}
+              {formatCurrency(current.amount_ron, 'RON', 2)}
             </Text>
-            {transaction.currency_code !== 'RON' && (
+            {current.currency_code !== 'RON' && (
               <Text style={s.heroOriginal}>
-                {formatCurrency(transaction.amount, transaction.currency_code, 2)}
+                {formatCurrency(current.amount, current.currency_code, 2)}
               </Text>
             )}
           </View>
 
           {/* Detail rows */}
           <View style={s.fieldsCard}>
-            <DetailRow label="Type" value={transaction.type === 'income' ? '↑ Income' : '↓ Expense'} valueColor={amountColor} />
-            <DetailRow label="Date" value={dateFormatted} />
-            <DetailRow label="Currency" value={transaction.currency_code} />
-            {!!transaction.description && (
-              <DetailRow label="Description" value={transaction.description} />
-            )}
-            {!!transaction.note && (
-              <DetailRow label="Note" value={transaction.note} />
+            <DetailRow label="Type" value={current.type === 'income' ? '↑ Income' : '↓ Expense'} valueColor={amountColor} />
+            <DetailRow label="Date" value={viewDateFormatted} />
+            <DetailRow label="Currency" value={current.currency_code} />
+            {!!current.description && (
+              <DetailRow label="Note" value={current.description} />
             )}
             <DetailRow
               label="Added"
-              value={format(new Date(transaction.created_at), 'd MMM yyyy, HH:mm')}
+              value={format(new Date(current.created_at), 'd MMM yyyy, HH:mm')}
               isLast
             />
           </View>
@@ -208,13 +239,34 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
             placeholderTextColor={colors.text.muted}
             keyboardType="decimal-pad"
             returnKeyType="done"
-            autoFocus
             selectTextOnFocus
           />
           <Text style={s.amountCurrencyLabel}>{currency}</Text>
         </View>
 
-        {/* Pickers */}
+        {/* Note / description */}
+        <View style={s.noteCard}>
+          <Text style={s.noteIcon}>✏️</Text>
+          <TextInput
+            style={s.noteInput}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Note (e.g. Lidl, Netflix…)"
+            placeholderTextColor={colors.text.muted}
+            returnKeyType="done"
+            maxLength={80}
+          />
+          {description.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setDescription('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={s.noteClear}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Category */}
         <TouchableOpacity style={s.field} onPress={() => setShowCatPicker(true)}>
           <Text style={s.fieldIcon}>{selectedCategory?.icon ?? '📂'}</Text>
           <Text style={s.fieldLabel}>Category</Text>
@@ -224,6 +276,7 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
           <Text style={s.fieldChevron}>›</Text>
         </TouchableOpacity>
 
+        {/* Date */}
         <TouchableOpacity style={s.field} onPress={() => setShowDatePicker(true)}>
           <Text style={s.fieldIcon}>📅</Text>
           <Text style={s.fieldLabel}>Date</Text>
@@ -231,13 +284,13 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
           <Text style={s.fieldChevron}>›</Text>
         </TouchableOpacity>
 
+        {/* Currency */}
         <TouchableOpacity style={s.field} onPress={() => setShowCurPicker(true)}>
           <Text style={s.fieldIcon}>💱</Text>
           <Text style={s.fieldLabel}>Currency</Text>
           <Text style={s.fieldValue}>{currency} — {selectedCurrency?.name}</Text>
           <Text style={s.fieldChevron}>›</Text>
         </TouchableOpacity>
-
       </ScrollView>
 
       <DatePickerModal visible={showDatePicker} value={date} onChange={setDate} onClose={() => setShowDatePicker(false)} />
@@ -275,34 +328,37 @@ const s = StyleSheet.create({
   headerBtn:     { minWidth: 72, paddingVertical: 4 },
   headerBtnText: { fontSize: 14, color: colors.accent.primary },
 
-  viewBody: { padding: 16, gap: 14, paddingBottom: 40 },
-  heroCard: { backgroundColor: colors.bg.secondary, borderRadius: 16, borderWidth: 1, borderColor: colors.border.default, padding: 24, alignItems: 'center', gap: 6 },
-  heroIcon: { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  viewBody:     { padding: 16, gap: 14, paddingBottom: 40 },
+  heroCard:     { backgroundColor: colors.bg.secondary, borderRadius: 16, borderWidth: 1, borderColor: colors.border.default, padding: 24, alignItems: 'center', gap: 6 },
+  heroIcon:     { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   heroEmoji:    { fontSize: 28 },
   heroCategory: { fontSize: 13, color: colors.text.secondary, marginTop: 4 },
   heroAmount:   { fontSize: 34, fontWeight: '700', letterSpacing: -0.5 },
   heroOriginal: { fontSize: 13, color: colors.text.muted },
 
-  fieldsCard: { backgroundColor: colors.bg.secondary, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, overflow: 'hidden' },
+  fieldsCard:    { backgroundColor: colors.bg.secondary, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, overflow: 'hidden' },
+  deleteBtn:     { backgroundColor: 'rgba(248,113,113,0.08)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  deleteBtnText: { fontSize: 14, fontWeight: '600', color: colors.expense },
 
-  deleteBtn:    { backgroundColor: 'rgba(248,113,113,0.08)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  deleteBtnText:{ fontSize: 14, fontWeight: '600', color: colors.expense },
-
-  editBody: { padding: 16, gap: 12, paddingBottom: 32 },
+  editBody:       { padding: 16, gap: 12, paddingBottom: 32 },
   typeToggle:     { flexDirection: 'row', backgroundColor: colors.bg.secondary, borderRadius: 8, padding: 2, borderWidth: 1, borderColor: colors.border.default },
   typeBtn:        { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 6 },
   typeBtnExpense: { backgroundColor: 'rgba(248,113,113,0.15)' },
   typeBtnIncome:  { backgroundColor: 'rgba(52,211,153,0.15)' },
   typeBtnText:    { fontSize: 13, fontWeight: '600', color: colors.text.muted },
 
-  amountCard:         { backgroundColor: colors.bg.secondary, borderRadius: 14, borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  amountInput:        { flex: 1, fontSize: 40, fontWeight: '700', letterSpacing: -1, padding: 0 },
-  amountCurrencyLabel:{ fontSize: 16, fontWeight: '600', color: colors.text.secondary, alignSelf: 'flex-end', paddingBottom: 6 },
+  amountCard:          { backgroundColor: colors.bg.secondary, borderRadius: 14, borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  amountInput:         { flex: 1, fontSize: 40, fontWeight: '700', letterSpacing: -1, padding: 0 },
+  amountCurrencyLabel: { fontSize: 16, fontWeight: '600', color: colors.text.secondary, alignSelf: 'flex-end', paddingBottom: 6 },
+
+  noteCard:  { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg.secondary, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border.default },
+  noteIcon:  { fontSize: 15 },
+  noteInput: { flex: 1, fontSize: 14, color: colors.text.primary, padding: 0 },
+  noteClear: { fontSize: 13, color: colors.text.muted },
 
   field:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg.secondary, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border.default },
   fieldIcon:    { fontSize: 16 },
   fieldLabel:   { fontSize: 11, color: colors.text.muted, width: 60 },
   fieldValue:   { flex: 1, fontSize: 13, color: colors.text.primary, fontWeight: '500' },
   fieldChevron: { fontSize: 18, color: colors.text.muted },
-
 });

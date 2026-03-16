@@ -4,6 +4,7 @@ import {
   TouchableOpacity, Dimensions, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Rect, Line, Text as SvgText, Circle, Path, G } from 'react-native-svg';
 import { colors } from '../../theme';
 import {
@@ -112,14 +113,26 @@ function DonutChart({ data }: { data: { color: string; pct: number }[] }) {
 // ── Category drill-down modal ─────────────────────────────────────────────────
 interface CatFilter { categoryId: number; categoryName: string; categoryIcon: string; dateFrom: string; dateTo: string; }
 
-function CategoryModal({ filter, onClose }: { filter: CatFilter; onClose: () => void }) {
+function CategoryModal({ filter, onClose, onDataChanged }: { filter: CatFilter; onClose: () => void; onDataChanged: () => void }) {
   const [txs, setTxs]         = useState<Transaction[]>([]);
   const [selected, setSelected] = useState<Transaction | null>(null);
 
+  const loadCategoryTransactions = useCallback(async () => {
+    try {
+      const items = await getTransactions({
+        dateFrom: filter.dateFrom,
+        dateTo: filter.dateTo,
+        category_id: filter.categoryId,
+      });
+      setTxs(items);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [filter.categoryId, filter.dateFrom, filter.dateTo]);
+
   useEffect(() => {
-    getTransactions({ dateFrom: filter.dateFrom, dateTo: filter.dateTo, category_id: filter.categoryId })
-      .then(setTxs).catch(console.error);
-  }, [filter]);
+    loadCategoryTransactions();
+  }, [loadCategoryTransactions]);
 
   const sections = Object.entries(groupByDate(txs)).sort(([a], [b]) => b.localeCompare(a));
 
@@ -153,8 +166,35 @@ function CategoryModal({ filter, onClose }: { filter: CatFilter; onClose: () => 
               </View>
             )} />
       }
-      <Modal visible={selected !== null} animationType="slide" transparent={false} onRequestClose={() => setSelected(null)}>
-        {selected !== null && <TransactionDetailScreen transaction={selected} onClose={() => setSelected(null)} onDeleted={() => setSelected(null)} />}
+      <Modal
+        visible={selected !== null}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => {
+          setSelected(null);
+          loadCategoryTransactions();
+          onDataChanged();
+        }}
+      >
+        {selected !== null && (
+          <TransactionDetailScreen
+            transaction={selected}
+            onClose={() => {
+              setSelected(null);
+              loadCategoryTransactions();
+              onDataChanged();
+            }}
+            onDeleted={() => {
+              setSelected(null);
+              loadCategoryTransactions();
+              onDataChanged();
+            }}
+            onUpdated={() => {
+              loadCategoryTransactions();
+              onDataChanged();
+            }}
+          />
+        )}
       </Modal>
     </SafeAreaView>
   );
@@ -208,7 +248,11 @@ export default function ReportsScreen() {
     }
   }, [period]);
 
-  useEffect(() => { loadDate(); }, [loadDate]);
+  useFocusEffect(
+    useCallback(() => {
+      loadDate();
+    }, [loadDate])
+  );
 
   const income   = calculateIncome(transactions);
   const expenses = calculateExpenses(transactions);
@@ -313,8 +357,25 @@ export default function ReportsScreen() {
         )}
       </ScrollView>
 
-      <Modal visible={catFilter !== null} animationType="slide" transparent={false} onRequestClose={() => setCatFilter(null)}>
-        {catFilter !== null && <CategoryModal filter={catFilter} onClose={() => { setCatFilter(null); loadDate(); }} />}
+      <Modal
+        visible={catFilter !== null}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => {
+          setCatFilter(null);
+          loadDate();
+        }}
+      >
+        {catFilter !== null && (
+          <CategoryModal
+            filter={catFilter}
+            onClose={() => {
+              setCatFilter(null);
+              loadDate();
+            }}
+            onDataChanged={loadDate}
+          />
+        )}
       </Modal>
     </SafeAreaView>
   );

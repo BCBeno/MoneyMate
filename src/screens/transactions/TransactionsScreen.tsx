@@ -173,13 +173,17 @@ export default function TransactionsScreen() {
         visible={selectedTx !== null}
         animationType="slide"
         transparent={false}
-        onRequestClose={() => setSelectedTx(null)}
+        onRequestClose={() => {
+          setSelectedTx(null);
+          load();
+        }}
       >
         {selectedTx !== null && (
           <TransactionDetailScreen
             transaction={selectedTx}
             onClose={() => { setSelectedTx(null); load(); }}
             onDeleted={() => { setSelectedTx(null); load(); }}
+            onUpdated={() => load()}
           />
         )}
       </Modal>
