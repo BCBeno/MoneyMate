@@ -95,17 +95,27 @@ function DonutChart({ data }: { data: { color: string; pct: number }[] }) {
   let off = -90;
   const arcs = data.map(item => {
     const deg = item.pct * 3.6;
+    if (deg >= 359.99) {
+      off += deg;
+      return { full: true as const, color: item.color };
+    }
     if (deg < 1) { off += deg; return null; }
     const sr = (off * Math.PI) / 180;
     const er = ((off + deg) * Math.PI) / 180;
     const path = `M ${(CX + R * Math.cos(sr)).toFixed(2)} ${(CY + R * Math.sin(sr)).toFixed(2)} A ${R} ${R} 0 ${deg > 180 ? 1 : 0} 1 ${(CX + R * Math.cos(er)).toFixed(2)} ${(CY + R * Math.sin(er)).toFixed(2)}`;
     off += deg;
-    return { path, color: item.color };
+    return { full: false as const, path, color: item.color };
   });
   return (
     <Svg width={110} height={110}>
       <Circle cx={CX} cy={CY} r={R} fill="none" stroke={colors.bg.elevated} strokeWidth={STR} />
-      {arcs.map((a, i) => a ? <Path key={i} d={a.path} fill="none" stroke={a.color} strokeWidth={STR} strokeLinecap="butt" /> : null)}
+      {arcs.map((a, i) => {
+        if (!a) return null;
+        if (a.full) {
+          return <Circle key={i} cx={CX} cy={CY} r={R} fill="none" stroke={a.color} strokeWidth={STR} />;
+        }
+        return <Path key={i} d={a.path} fill="none" stroke={a.color} strokeWidth={STR} strokeLinecap="butt" />;
+      })}
     </Svg>
   );
 }
@@ -315,7 +325,7 @@ export default function ReportsScreen() {
         {/* Donut + category breakdown */}
         {catWithPct.length > 0 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>Expenses pe categorii</Text>
+            <Text style={s.cardTitle}>Expenses by Category</Text>
             <View style={s.donutRow}>
               <DonutChart data={catWithPct} />
               <View style={s.donutLegend}>
