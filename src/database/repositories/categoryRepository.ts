@@ -25,7 +25,51 @@ export async function createCategory(
   return result.lastInsertRowId;
 }
 
+export async function updateCategory(
+  id: number,
+  name: string,
+  icon: string,
+  color: string,
+  type: 'income' | 'expense'
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE categories
+     SET name = ?,
+         icon = ?,
+         color = ?,
+         type = ?
+     WHERE id = ?`,
+    [name, icon, color, type, id]
+  );
+}
+
 export async function deleteCategory(id: number): Promise<void> {
   const db = await getDatabase();
-  await db.runAsync(`DELETE FROM categories WHERE id = ? AND is_default = 0`, [id]);
+  const category = await db.getFirstAsync<{ id: number; type: 'income' | 'expense' }>(
+    `SELECT id, type FROM categories WHERE id = ?`,
+    [id]
+  );
+
+  if (!category) return;
+
+  const replacement = await db.getFirstAsync<{ id: number }>(
+    `SELECT id
+     FROM categories
+     WHERE type = ? AND id != ?
+     ORDER BY is_default DESC, name ASC
+     LIMIT 1`,
+    [category.type, id]
+  );
+
+  if (!replacement) {
+    throw new Error('At least one category must remain for this type.');
+  }
+
+  await db.runAsync(
+    `UPDATE transactions SET category_id = ? WHERE category_id = ?`,
+    [replacement.id, id]
+  );
+
+  await db.runAsync(`DELETE FROM categories WHERE id = ?`, [id]);
 }

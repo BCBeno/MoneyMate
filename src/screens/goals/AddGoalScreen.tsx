@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, TextInput, Alert,
+  Platform,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../theme';
 import { useGoalsStore } from '../../store/slices/goalsSlice';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
 import { toISODate } from '../../utils/formatDate';
-import DatePickerModal from '../../components/common/DatePickerModal';
 import BottomSheetPicker, { PickerItem } from '../../components/common/BottomSheetPicker';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -31,9 +32,13 @@ export default function AddGoalScreen({ onClose }: Props) {
   const { add } = useGoalsStore();
 
   const handleSave = async () => {
-    const target = parseFloat(targetStr);
+    const targetInput = targetStr.trim();
+    const target = targetInput === '' ? 0 : parseFloat(targetInput);
     if (!name.trim()) { Alert.alert('Error', 'Please enter a name.'); return; }
-    if (isNaN(target) || target <= 0) { Alert.alert('Error', 'Please enter the target amount.'); return; }
+    if (targetInput !== '' && (isNaN(target) || target <= 0)) {
+      Alert.alert('Error', 'If target is set, it must be greater than 0.');
+      return;
+    }
     setSaving(true);
     try {
       await add({ name: name.trim(), target_amount: target, currency_code: currency, icon, color, deadline: deadline || undefined });
@@ -49,6 +54,15 @@ export default function AddGoalScreen({ onClose }: Props) {
   const currencyItems: PickerItem[] = DEFAULT_CURRENCIES.map(c => ({
     key: c.code, label: c.code, sublabel: c.name, icon: c.symbol,
   }));
+
+  const handleDeadlineChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDeadlinePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setDeadline(toISODate(selectedDate));
+    }
+  };
 
   const deadlineFmt = deadline
     ? (() => { try { return format(new Date(deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: enUS }); } catch { return deadline; } })()
@@ -80,13 +94,13 @@ export default function AddGoalScreen({ onClose }: Props) {
           placeholderTextColor={colors.text.muted}
         />
 
-        <Text style={s.label}>TARGET AMOUNT</Text>
+        <Text style={s.label}>TARGET AMOUNT (optional)</Text>
         <View style={s.row}>
           <TextInput
             style={[s.input, { flex: 1 }]}
             value={targetStr}
             onChangeText={setTargetStr}
-            placeholder="0"
+            placeholder="Select a target amount (optional)"
             placeholderTextColor={colors.text.muted}
             keyboardType="decimal-pad"
           />
@@ -136,12 +150,25 @@ export default function AddGoalScreen({ onClose }: Props) {
         </TouchableOpacity>
       </ScrollView>
 
-      <DatePickerModal
-        visible={showDeadlinePicker}
-        value={deadline || toISODate(new Date())}
-        onChange={setDeadline}
-        onClose={() => setShowDeadlinePicker(false)}
-      />
+      {showDeadlinePicker && (
+        <View style={s.datePickerWrap}>
+          <DateTimePicker
+            value={new Date((deadline || toISODate(new Date())) + 'T12:00:00')}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            design={Platform.OS === 'android' ? 'material' : undefined}
+            themeVariant="dark"
+            textColor="#FFFFFF"
+            accentColor="#00D4AA"
+            onChange={handleDeadlineChange}
+          />
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity style={s.datePickerDoneBtn} onPress={() => setShowDeadlinePicker(false)}>
+              <Text style={s.datePickerDoneText}>Done</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       <BottomSheetPicker
         visible={showCurPicker}
         title="Select currency"
@@ -169,6 +196,9 @@ const s = StyleSheet.create({
   row:       { flexDirection: 'row', gap: 8, alignItems: 'center' },
   currBtn:   { backgroundColor: colors.bg.tertiary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, paddingHorizontal: 14, height: 52, justifyContent: 'center' },
   currBtnText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
+  datePickerWrap:    { backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: colors.border.default, paddingVertical: 8 },
+  datePickerDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
+  datePickerDoneText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
   grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   iconBtn:   { width: 52, height: 52, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.bg.tertiary, alignItems: 'center', justifyContent: 'center' },
   iconText:  { fontSize: 24 },

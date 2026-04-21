@@ -8,9 +8,11 @@ import { colors } from '../../theme';
 import {
   getCategories,
   createCategory,
+  updateCategory,
   deleteCategory,
 } from '../../database/repositories/categoryRepository';
 import { Category } from '../../constants/categories';
+import { useTransactionsStore } from '../../store/slices/transactionsSlice';
 
 const ICONS = [
   '🍽️','🚗','💡','❤️','🎬','🛍️','📚','📈','💼','💻','➕','🏠','✈️',
@@ -28,12 +30,15 @@ interface Props { onClose: () => void; }
 export default function CategoriesScreen({ onClose }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tab, setTab]               = useState<'expense' | 'income'>('expense');
-  const [showAdd, setShowAdd]       = useState(false);
+  const [showForm, setShowForm]     = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const reloadTransactions = useTransactionsStore(state => state.load);
 
-  // Add form
+  // Form state
   const [newName, setNewName]   = useState('');
   const [newIcon, setNewIcon]   = useState('📦');
   const [newColor, setNewColor] = useState('#F97316');
+  const [formType, setFormType] = useState<'expense' | 'income'>('expense');
   const [saving, setSaving]     = useState(false);
 
   const load = useCallback(async () => {
@@ -45,14 +50,46 @@ export default function CategoriesScreen({ onClose }: Props) {
 
   const filtered = categories.filter(c => c.type === tab);
 
-  const handleAdd = async () => {
+  const resetForm = (nextType?: 'expense' | 'income') => {
+    setEditingCategory(null);
+    setNewName('');
+    setNewIcon('📦');
+    setNewColor('#F97316');
+    setFormType(nextType ?? tab);
+  };
+
+  const openAddForm = () => {
+    resetForm(tab);
+    setShowForm(true);
+  };
+
+  const openEditForm = (cat: Category) => {
+    setEditingCategory(cat);
+    setNewName(cat.name);
+    setNewIcon(cat.icon);
+    setNewColor(cat.color);
+    setFormType(cat.type);
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
+  const persistSave = async () => {
     if (!newName.trim()) { Alert.alert('Error', 'Please enter a name.'); return; }
     setSaving(true);
     try {
-      await createCategory(newName.trim(), newIcon, newColor, tab);
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, newName.trim(), newIcon, newColor, formType);
+      } else {
+        await createCategory(newName.trim(), newIcon, newColor, formType);
+      }
+
       await load();
-      setShowAdd(false);
-      setNewName(''); setNewIcon('📦'); setNewColor('#F97316');
+      await reloadTransactions();
+      closeForm();
     } catch (e: any) {
       Alert.alert('Error', e?.message ?? 'Could not save.');
     } finally {
@@ -60,19 +97,37 @@ export default function CategoriesScreen({ onClose }: Props) {
     }
   };
 
-  const handleDelete = (cat: Category) => {
-    if (cat.is_default === 1) {
-      Alert.alert('Default category', 'Default categories cannot be deleted.');
+  const handleSave = () => {
+    if (!editingCategory) {
+      void persistSave();
       return;
     }
+
     Alert.alert(
-      'Delete categorie',
-      `Delete "${cat.name}"? Associated transactions will not be removed.`,
+      'Save changes',
+      `Update category "${editingCategory.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Save', onPress: () => { void persistSave(); } },
+      ]
+    );
+  };
+
+  const handleDelete = (cat: Category) => {
+    Alert.alert(
+      'Delete category',
+      `Delete "${cat.name}"? Existing transactions will be moved to another category of the same type.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: async () => {
-          await deleteCategory(cat.id);
-          await load();
+          try {
+            await deleteCategory(cat.id);
+            await load();
+            await reloadTransactions();
+            closeForm();
+          } catch (e: any) {
+            Alert.alert('Error', e?.message ?? 'Could not delete category.');
+          }
         }},
       ]
     );
@@ -86,8 +141,8 @@ export default function CategoriesScreen({ onClose }: Props) {
           <Text style={s.backText}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle}>Categories</Text>
-        <TouchableOpacity onPress={() => setShowAdd(true)} style={s.addBtn}>
-          <Text style={s.addBtnText}>+ Nou</Text>
+        <TouchableOpacity onPress={openAddForm} style={s.addBtn}>
+          <Text style={s.addBtnText}>+ New</Text>
         </TouchableOpacity>
       </View>
 
@@ -109,29 +164,35 @@ export default function CategoriesScreen({ onClose }: Props) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={<Text style={s.emptyText}>No categories</Text>}
         renderItem={({ item: cat }) => (
-          <View style={s.catRow}>
+          <TouchableOpacity style={s.catRow} onPress={() => openEditForm(cat)} activeOpacity={0.75}>
             <View style={[s.catIcon, { backgroundColor: cat.color + '26' }]}>
               <Text style={s.catEmoji}>{cat.icon}</Text>
             </View>
             <Text style={s.catName}>{cat.name}</Text>
-            {cat.is_default === 1
-              ? <Text style={s.defaultBadge}>default</Text>
-              : (
-                <TouchableOpacity onPress={() => handleDelete(cat)} style={s.delBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={s.delBtnText}>🗑</Text>
-                </TouchableOpacity>
-              )
-            }
-          </View>
+            {cat.is_default === 1 ? <Text style={s.defaultBadge}>Default</Text> : null}
+            <Text style={s.chevron}>›</Text>
+          </TouchableOpacity>
         )}
       />
 
-      {/* Add category modal */}
-      <Modal visible={showAdd} animationType="slide" transparent onRequestClose={() => setShowAdd(false)}>
-        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setShowAdd(false)} />
+      {/* Category form modal */}
+      <Modal visible={showForm} animationType="slide" transparent onRequestClose={closeForm}>
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={closeForm} />
         <SafeAreaView style={s.sheet} edges={['bottom']}>
           <View style={s.sheetHandle} />
-          <Text style={s.sheetTitle}>New {tab === 'expense' ? 'Expense' : 'Income'} category</Text>
+          <Text style={s.sheetTitle}>
+            {editingCategory ? 'Edit category' : `New ${formType === 'expense' ? 'Expense' : 'Income'} category`}
+          </Text>
+
+          {/* Type picker */}
+          <View style={s.tabRow}>
+            <TouchableOpacity style={[s.tabBtn, formType === 'expense' && s.tabBtnActive]} onPress={() => setFormType('expense')}>
+              <Text style={[s.tabBtnText, formType === 'expense' && s.tabBtnTextActive]}>Expenses</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.tabBtn, formType === 'income' && s.tabBtnActive]} onPress={() => setFormType('income')}>
+              <Text style={[s.tabBtnText, formType === 'income' && s.tabBtnTextActive]}>Income</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Preview */}
           <View style={[s.preview, { backgroundColor: newColor + '22', borderColor: newColor }]}>
@@ -175,9 +236,19 @@ export default function CategoriesScreen({ onClose }: Props) {
             ))}
           </ScrollView>
 
-          <TouchableOpacity style={s.saveBtn} onPress={handleAdd} disabled={saving}>
-            <Text style={s.saveBtnText}>{saving ? '...' : 'Save categoria'}</Text>
+          <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
+            <Text style={s.saveBtnText}>{saving ? '...' : (editingCategory ? 'Update category' : 'Save category')}</Text>
           </TouchableOpacity>
+
+          {editingCategory ? (
+            <TouchableOpacity
+              style={s.deleteModalBtn}
+              onPress={() => handleDelete(editingCategory)}
+              disabled={saving}
+            >
+              <Text style={s.deleteModalBtnText}>Delete category</Text>
+            </TouchableOpacity>
+          ) : null}
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -208,8 +279,7 @@ const s = StyleSheet.create({
   catEmoji:     { fontSize: 18 },
   catName:      { flex: 1, fontSize: 14, fontWeight: '500', color: colors.text.primary },
   defaultBadge: { fontSize: 10, color: colors.text.muted, backgroundColor: colors.bg.tertiary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
-  delBtn:       { padding: 4 },
-  delBtnText:   { fontSize: 16 },
+  chevron:      { fontSize: 20, color: colors.text.muted, paddingLeft: 6 },
 
   // Sheet
   overlay:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
@@ -231,4 +301,6 @@ const s = StyleSheet.create({
 
   saveBtn:     { backgroundColor: colors.accent.primary, borderRadius: 12, height: 50, alignItems: 'center', justifyContent: 'center' },
   saveBtnText: { fontSize: 15, fontWeight: '700', color: colors.bg.primary },
+  deleteModalBtn: { borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(239,68,68,0.4)', backgroundColor: 'rgba(239,68,68,0.08)' },
+  deleteModalBtnText: { fontSize: 14, fontWeight: '700', color: '#F87171' },
 });

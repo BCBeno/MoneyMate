@@ -71,7 +71,8 @@ export default function DashboardScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Active goals</Text>
             {activeGoals.map(goal => {
-              const pct = Math.min(100, (goal.current_amount / goal.target_amount) * 100);
+              const hasTarget = goal.target_amount > 0;
+              const pct = hasTarget ? Math.min(100, (goal.current_amount / goal.target_amount) * 100) : 0;
               return (
                 <View key={goal.id} style={s.goalCard}>
                   <View style={s.goalHeader}>
@@ -81,10 +82,12 @@ export default function DashboardScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={s.goalName}>{goal.name}</Text>
                       <Text style={s.goalSub}>
-                        {formatCurrency(goal.current_amount, '', 0)} / {formatCurrency(goal.target_amount, goal.currency_symbol ?? 'RON', 0)}
+                        {hasTarget
+                          ? `${formatCurrency(goal.current_amount, '', 0)} / ${formatCurrency(goal.target_amount, goal.currency_symbol ?? 'RON', 0)}`
+                          : `${formatCurrency(goal.current_amount, goal.currency_symbol ?? 'RON', 0)} saved`}
                       </Text>
                     </View>
-                    <Text style={s.goalPct}>{Math.round(pct)}%</Text>
+                    <Text style={s.goalPct}>{hasTarget ? `${Math.round(pct)}%` : 'No target'}</Text>
                   </View>
                   <View style={s.progressBg}>
                     <View style={[s.progressFill, { width: `${pct}%` as any, backgroundColor: goal.color }]} />

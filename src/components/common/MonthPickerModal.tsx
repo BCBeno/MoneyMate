@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { colors } from '../../theme';
 
@@ -18,6 +18,11 @@ const MONTHS = [
 export default function MonthPickerModal({ visible, value, onChange, onClose }: Props) {
   const [y, setY] = useState(() => parseInt(value.substring(0, 4), 10));
   const [m, setM] = useState(() => parseInt(value.substring(5, 7), 10));
+
+  useEffect(() => {
+    setY(parseInt(value.substring(0, 4), 10));
+    setM(parseInt(value.substring(5, 7), 10));
+  }, [value]);
 
   const confirm = () => {
     onChange(`${y}-${String(m).padStart(2, '0')}`);

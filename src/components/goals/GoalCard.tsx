@@ -13,7 +13,8 @@ interface Props {
 }
 
 export default function GoalCard({ goal, onPress }: Props) {
-  const progress = goal.current_amount / goal.target_amount;
+  const hasTarget = goal.target_amount > 0;
+  const progress = hasTarget ? goal.current_amount / goal.target_amount : 0;
   const symbol = goal.currency_symbol ?? 'RON';
   const daysLeft = goal.deadline ? getDaysUntil(goal.deadline) : null;
 
@@ -42,8 +43,8 @@ export default function GoalCard({ goal, onPress }: Props) {
       <ProgressBar progress={progress} color={goal.color} height={6} />
       <View style={styles.amounts}>
         <Text style={styles.current}>{formatCurrency(goal.current_amount, symbol, 0)}</Text>
-        <Text style={styles.target}>of {formatCurrency(goal.target_amount, symbol, 0)}</Text>
-        <Text style={[styles.pct, { color: goal.color }]}>{(progress * 100).toFixed(0)}%</Text>
+        <Text style={styles.target}>{hasTarget ? `of ${formatCurrency(goal.target_amount, symbol, 0)}` : 'No target'}</Text>
+        <Text style={[styles.pct, { color: goal.color }]}>{hasTarget ? `${(progress * 100).toFixed(0)}%` : '--'}</Text>
       </View>
     </TouchableOpacity>
   );

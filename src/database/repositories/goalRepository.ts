@@ -27,7 +27,7 @@ export interface GoalContribution {
 
 export interface CreateGoalDto {
   name: string;
-  target_amount: number;
+  target_amount?: number;
   currency_code: string;
   icon: string;
   color: string;
@@ -37,7 +37,7 @@ export interface CreateGoalDto {
 
 export interface UpdateGoalDto {
   name: string;
-  target_amount: number;
+  target_amount?: number;
   currency_code: string;
   icon: string;
   color: string;
@@ -73,11 +73,12 @@ export async function getGoalById(id: number): Promise<Goal | null> {
 
 export async function createGoal(dto: CreateGoalDto): Promise<number> {
   const db = await getDatabase();
+  const safeTarget = dto.target_amount && dto.target_amount > 0 ? dto.target_amount : 0;
   const result = await db.runAsync(
     `INSERT INTO goals (name, target_amount, currency_code, icon, color, deadline, note)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
-      dto.name, dto.target_amount, dto.currency_code,
+      dto.name, safeTarget, dto.currency_code,
       dto.icon, dto.color,
       dto.deadline ?? null, dto.note ?? null,
     ]
@@ -87,6 +88,7 @@ export async function createGoal(dto: CreateGoalDto): Promise<number> {
 
 export async function updateGoal(id: number, dto: UpdateGoalDto): Promise<void> {
   const db = await getDatabase();
+  const safeTarget = dto.target_amount && dto.target_amount > 0 ? dto.target_amount : 0;
   await db.runAsync(
     `UPDATE goals
      SET name          = ?,
@@ -99,7 +101,7 @@ export async function updateGoal(id: number, dto: UpdateGoalDto): Promise<void> 
          updated_at    = CURRENT_TIMESTAMP
      WHERE id = ?`,
     [
-      dto.name, dto.target_amount, dto.currency_code,
+      dto.name, safeTarget, dto.currency_code,
       dto.icon, dto.color,
       dto.deadline ?? null, dto.note ?? null,
       id,
@@ -145,7 +147,7 @@ export async function addContribution(
   await db.runAsync(
     `UPDATE goals
      SET status = 'completed'
-     WHERE id = ? AND current_amount >= target_amount AND status = 'active'`,
+     WHERE id = ? AND target_amount > 0 AND current_amount >= target_amount AND status = 'active'`,
     [goalId]
   );
 }

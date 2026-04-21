@@ -4,6 +4,7 @@ import {
   ScrollView, Alert, TextInput,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { useTransactionsStore } from '../../store/slices/transactionsSlice';
@@ -13,7 +14,6 @@ import { convertToRON } from '../../services/currencyService';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
 import { toISODate } from '../../utils/formatDate';
 import { format } from 'date-fns';
-import DatePickerModal from '../../components/common/DatePickerModal';
 import BottomSheetPicker, { PickerItem } from '../../components/common/BottomSheetPicker';
 
 interface Props {
@@ -97,6 +97,15 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
   const currencyItems: PickerItem[] = DEFAULT_CURRENCIES.map(c => ({
     key: c.code, label: c.code, sublabel: c.name, icon: c.symbol,
   }));
+
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setDate(toISODate(selectedDate));
+    }
+  };
 
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
@@ -208,12 +217,25 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <DatePickerModal
-        visible={showDatePicker}
-        value={date}
-        onChange={setDate}
-        onClose={() => setShowDatePicker(false)}
-      />
+      {showDatePicker && (
+        <View style={s.datePickerWrap}>
+          <DateTimePicker
+            value={new Date(date + 'T12:00:00')}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            design={Platform.OS === 'android' ? 'material' : undefined}
+            themeVariant="dark"
+            textColor="#FFFFFF"
+            accentColor="#00D4AA"
+            onChange={handleDateChange}
+          />
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity style={s.datePickerDoneBtn} onPress={() => setShowDatePicker(false)}>
+              <Text style={s.datePickerDoneText}>Done</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       <BottomSheetPicker
         visible={showCatPicker}
         title="Select category"
@@ -291,6 +313,10 @@ const s = StyleSheet.create({
   fieldValue:       { flex: 1, fontSize: 13, color: colors.text.primary, fontWeight: '500' },
   fieldPlaceholder: { color: colors.text.muted, fontWeight: '400' },
   fieldChevron:     { fontSize: 18, color: colors.text.muted },
+
+  datePickerWrap:    { backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: colors.border.default, paddingVertical: 8 },
+  datePickerDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
+  datePickerDoneText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
 
   saveBtn:     { borderRadius: 12, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   saveBtnText: { fontSize: 16, fontWeight: '700', color: '#0B0D12' },

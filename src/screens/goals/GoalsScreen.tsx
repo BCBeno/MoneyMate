@@ -7,17 +7,59 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { Goal } from '../../database/repositories/goalRepository';
 import { useGoalsStore } from '../../store/slices/goalsSlice';
+import { getSetting, setSetting } from '../../database/repositories/settingsRepository';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getDaysUntil, toISODate } from '../../utils/formatDate';
 import GoalDetailScreen from './GoalDetailScreen';
 import AddGoalScreen from './AddGoalScreen';
 
+type GoalSetupChoice = 'unset' | 'enabled' | 'skipped';
+
+const GOALS_SETUP_KEY = 'goals_setup_choice';
+
 export default function GoalsScreen() {
   const { goals, load } = useGoalsStore();
-  const [showAdd, setShowAdd]         = useState(false);
+  const [showAdd, setShowAdd]           = useState(false);
+  const [setupChoice, setSetupChoice]   = useState<GoalSetupChoice>('unset');
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    void loadSetupChoice();
+  }, []);
+
+  const loadSetupChoice = async () => {
+    try {
+      const value = await getSetting(GOALS_SETUP_KEY);
+      if (value === 'enabled' || value === 'skipped') {
+        setSetupChoice(value);
+        return;
+      }
+      setSetupChoice('unset');
+    } catch (e) {
+      console.error('load setup choice error:', e);
+      setSetupChoice('unset');
+    }
+  };
+
+  const handleChooseSetup = async (choice: GoalSetupChoice) => {
+    try {
+      await setSetting(GOALS_SETUP_KEY, choice);
+      setSetupChoice(choice);
+      if (choice === 'enabled') setShowAdd(true);
+    } catch (e) {
+      console.error('save setup choice error:', e);
+      Alert.alert('Error', 'Could not save this option. Please try again.');
+    }
+  };
+
+  const openAddGoal = async () => {
+    if (setupChoice !== 'enabled') {
+      await handleChooseSetup('enabled');
+      return;
+    }
+    setShowAdd(true);
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -29,11 +71,30 @@ export default function GoalsScreen() {
             <Text style={s.emptyEmoji}>🎯</Text>
             <Text style={s.emptyTitle}>No goals yet</Text>
             <Text style={s.emptyDesc}>Set a savings goal and track your progress.</Text>
+            <Text style={s.emptyHint}>Goal contributions are savings only and are not counted as expenses.</Text>
+
+            {setupChoice === 'unset' && (
+              <View style={s.emptyActionRow}>
+                <TouchableOpacity style={s.primaryAction} onPress={() => handleChooseSetup('enabled')} activeOpacity={0.85}>
+                  <Text style={s.primaryActionText}>Set a goal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.secondaryAction} onPress={() => handleChooseSetup('skipped')} activeOpacity={0.85}>
+                  <Text style={s.secondaryActionText}>Not now</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {setupChoice === 'skipped' && (
+              <TouchableOpacity style={s.secondaryAction} onPress={() => handleChooseSetup('enabled')} activeOpacity={0.85}>
+                <Text style={s.secondaryActionText}>Set one later</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
         {goals.map(goal => {
-          const pct        = Math.min(100, (goal.current_amount / goal.target_amount) * 100);
+          const hasTarget   = goal.target_amount > 0;
+          const pct         = hasTarget ? Math.min(100, (goal.current_amount / goal.target_amount) * 100) : 0;
           const days        = goal.deadline ? getDaysUntil(goal.deadline) : null;
           const isComplete  = goal.status === 'completed';
           const isPaused    = goal.status === 'paused';
@@ -77,17 +138,19 @@ export default function GoalsScreen() {
 
               <View style={s.cardFooter}>
                 <Text style={s.footerText}>
-                  {formatCurrency(goal.current_amount, '', 0)} / {formatCurrency(goal.target_amount, goal.currency_symbol ?? 'RON', 0)}
+                  {hasTarget
+                    ? `${formatCurrency(goal.current_amount, '', 0)} / ${formatCurrency(goal.target_amount, goal.currency_symbol ?? 'RON', 0)}`
+                    : `${formatCurrency(goal.current_amount, goal.currency_symbol ?? 'RON', 0)} saved`}
                 </Text>
                 <Text style={[s.footerPct, { color: isComplete ? colors.income : colors.accent.primary }]}>
-                  {Math.round(pct)}%
+                  {hasTarget ? `${Math.round(pct)}%` : 'No target'}
                 </Text>
               </View>
             </TouchableOpacity>
           );
         })}
 
-        <TouchableOpacity style={s.addCard} onPress={() => setShowAdd(true)} activeOpacity={0.7}>
+        <TouchableOpacity style={s.addCard} onPress={openAddGoal} activeOpacity={0.7}>
           <Text style={s.addIcon}>+</Text>
           <Text style={s.addText}>Add new goal</Text>
         </TouchableOpacity>
@@ -126,6 +189,28 @@ const s = StyleSheet.create({
   emptyEmoji: { fontSize: 48 },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
   emptyDesc:  { fontSize: 13, color: colors.text.secondary, textAlign: 'center', paddingHorizontal: 32 },
+  emptyHint:  { fontSize: 11, color: colors.text.muted, textAlign: 'center', paddingHorizontal: 22 },
+  emptyActionRow: { width: '100%', gap: 8, marginTop: 8 },
+  primaryAction: {
+    backgroundColor: colors.accent.primary,
+    borderRadius: 10,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  primaryActionText: { fontSize: 13, fontWeight: '700', color: colors.bg.primary },
+  secondaryAction: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    backgroundColor: colors.bg.secondary,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  secondaryActionText: { fontSize: 13, fontWeight: '600', color: colors.text.secondary },
 
   card:       { backgroundColor: colors.bg.secondary, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border.default },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },

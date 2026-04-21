@@ -18,6 +18,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
 import { format } from 'date-fns';
 import TransactionDetailScreen from '../transactions/TransactionDetailScreen';
+import MonthPickerModal from '../../components/common/MonthPickerModal';
 
 type Period = '1L' | '3L' | '1An';
 
@@ -52,6 +53,19 @@ function getPeriodRange(period: Period): { dateFrom: string; dateTo: string } {
       return { dateFrom: `${fy}-${pad(fm + 1)}-01`, dateTo: toStr };
     }
   }
+}
+
+function getMonthRange(month: string): { dateFrom: string; dateTo: string } {
+  const [yearStr, monthStr] = month.split('-');
+  const year = parseInt(yearStr, 10);
+  const monthIndex = parseInt(monthStr, 10) - 1;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+
+  return {
+    dateFrom: `${year}-${pad(monthIndex + 1)}-01`,
+    dateTo: `${year}-${pad(monthIndex + 1)}-${pad(lastDay)}`,
+  };
 }
 
 // ── Bar chart ─────────────────────────────────────────────────────────────────
@@ -234,9 +248,12 @@ const cm = StyleSheet.create({
 export default function ReportsScreen() {
   const [period, setPeriod]       = useState<Period>('1L');
   const [transactions, setTxs]    = useState<any[]>([]);
+  const [pieTransactions, setPieTransactions] = useState<any[]>([]);
   const [stats, setStats]         = useState<{ month: string; income: number; expenses: number }[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [catFilter, setCatFilter] = useState<CatFilter | null>(null);
+  const [selectedPieMonth, setSelectedPieMonth] = useState(() => format(new Date(), 'yyyy-MM'));
+  const [isMonthPickerVisible, setMonthPickerVisible] = useState(false);
   const [loading, setLoading]     = useState(false);
 
   const loadDate = useCallback(async () => {
@@ -264,10 +281,29 @@ export default function ReportsScreen() {
     }, [loadDate])
   );
 
+  const loadPieMonthData = useCallback(async () => {
+    try {
+      const txs = await getTransactions({ month: selectedPieMonth });
+      setPieTransactions(txs);
+    } catch (e) {
+      console.error('Reports pie month load error:', e);
+    }
+  }, [selectedPieMonth]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadPieMonthData();
+    }, [loadPieMonthData])
+  );
+
+  useEffect(() => {
+    loadPieMonthData();
+  }, [loadPieMonthData]);
+
   const income   = calculateIncome(transactions);
   const expenses = calculateExpenses(transactions);
 
-  const catDate = Object.entries(groupByCategory(transactions))
+  const catDate = Object.entries(groupByCategory(pieTransactions))
     .map(([id, amount]) => {
       const cat = categories.find(c => c.id === parseInt(id, 10));
       return { id: parseInt(id, 10), name: cat?.name ?? 'Other', icon: cat?.icon ?? '💰', color: cat?.color ?? '#666', amount: amount as number };
@@ -278,7 +314,8 @@ export default function ReportsScreen() {
   const totalCat   = catDate.reduce((s, c) => s + c.amount, 0);
   const catWithPct = catDate.map(c => ({ ...c, pct: totalCat > 0 ? (c.amount / totalCat) * 100 : 0 }));
 
-  const { dateFrom, dateTo } = getPeriodRange(period);
+  const { dateFrom, dateTo } = getMonthRange(selectedPieMonth);
+  const pieMonthLabel = format(new Date(`${selectedPieMonth}-15`), 'MMMM yyyy');
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -325,7 +362,16 @@ export default function ReportsScreen() {
         {/* Donut + category breakdown */}
         {catWithPct.length > 0 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>Expenses by Category</Text>
+            <View style={s.cardHeaderRow}>
+              <Text style={s.cardTitle}>Expenses by Category</Text>
+              <TouchableOpacity
+                style={s.monthFilterBtn}
+                onPress={() => setMonthPickerVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={s.monthFilterText}>{pieMonthLabel}</Text>
+              </TouchableOpacity>
+            </View>
             <View style={s.donutRow}>
               <DonutChart data={catWithPct} />
               <View style={s.donutLegend}>
@@ -387,6 +433,13 @@ export default function ReportsScreen() {
           />
         )}
       </Modal>
+
+      <MonthPickerModal
+        visible={isMonthPickerVisible}
+        value={selectedPieMonth}
+        onChange={setSelectedPieMonth}
+        onClose={() => setMonthPickerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -410,6 +463,16 @@ const s = StyleSheet.create({
 
   card:      { backgroundColor: colors.bg.secondary, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border.default, gap: 10 },
   cardTitle: { fontSize: 12, fontWeight: '600', color: colors.text.secondary },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  monthFilterBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.bg.elevated,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  monthFilterText: { fontSize: 11, color: colors.text.primary, fontWeight: '600' },
 
   legend:     { flexDirection: 'row', gap: 16, justifyContent: 'center' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },

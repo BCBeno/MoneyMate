@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors } from '../theme';
 import HomeScreen     from '../screens/home/HomeScreen';
+import GoalsScreen    from '../screens/goals/GoalsScreen';
 import ReportsScreen  from '../screens/reports/ReportsScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 
@@ -31,6 +32,11 @@ export default function MainTabNavigator() {
         name="Reports"
         component={ReportsScreen}
         options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="📊" label="Reports" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="Goals"
+        component={GoalsScreen}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🎯" label="Goals" focused={focused} /> }}
       />
       <Tab.Screen
         name="Settings"

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, Modal,
+  Platform,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../theme';
 import {
@@ -16,7 +18,6 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { toISODate } from '../../utils/formatDate';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import DatePickerModal from '../../components/common/DatePickerModal';
 import BottomSheetPicker, { PickerItem } from '../../components/common/BottomSheetPicker';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
 
@@ -31,13 +32,15 @@ interface Props {
 
 export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
   const { edit, remove, contribute, removeContribution, setStatus } = useGoalsStore();
+  const liveGoal = useGoalsStore(state => state.goals.find(g => g.id === goal.id));
+  const goalView = liveGoal ?? goal;
 
   const [isEditing, setIsEditing]       = useState(false);
   const [contributions, setContributions] = useState<GoalContribution[]>([]);
 
   // edit fields
   const [name, setName]         = useState(goal.name);
-  const [targetStr, setTargetStr] = useState(String(goal.target_amount));
+  const [targetStr, setTargetStr] = useState(goal.target_amount > 0 ? String(goal.target_amount) : '');
   const [currency, setCurrency] = useState(goal.currency_code);
   const [icon, setIcon]         = useState(goal.icon);
   const [color, setColor]       = useState(goal.color);
@@ -55,6 +58,12 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
   const [showCurPicker, setShowCurPicker]           = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [localStatus, setLocalStatus] = useState<Goal['status']>(goal.status);
+
+  useEffect(() => {
+    setLocalStatus(goalView.status);
+  }, [goalView.status]);
 
   useEffect(() => {
     loadContributions();
@@ -69,19 +78,24 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
     }
   };
 
-  const pct        = Math.min(100, (goal.current_amount / goal.target_amount) * 100);
-  const deadlineFmt = goal.deadline
+  const hasTarget = goalView.target_amount > 0;
+  const pct        = hasTarget ? Math.min(100, (goalView.current_amount / goalView.target_amount) * 100) : 0;
+  const deadlineFmt = goalView.deadline
     ? (() => {
-        try { return format(new Date(goal.deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: enUS }); }
-        catch { return goal.deadline; }
+        try { return format(new Date(goalView.deadline + 'T12:00:00'), 'd MMMM yyyy', { locale: enUS }); }
+        catch { return goalView.deadline; }
       })()
     : 'No deadline';
 
   // ── Save edit ──
   const handleSaveEdit = async () => {
-    const target = parseFloat(targetStr);
+    const targetInput = targetStr.trim();
+    const target = targetInput === '' ? 0 : parseFloat(targetInput);
     if (!name.trim()) { Alert.alert('Error', 'Please enter a name.'); return; }
-    if (isNaN(target) || target <= 0) { Alert.alert('Error', 'Please enter the target amount.'); return; }
+    if (targetInput !== '' && (isNaN(target) || target <= 0)) {
+      Alert.alert('Error', 'If target is set, it must be greater than 0.');
+      return;
+    }
     setSaving(true);
     try {
       const dto: UpdateGoalDto = {
@@ -121,7 +135,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
 
   // ── Delete contribution ──
   const handleDeleteContrib = (c: GoalContribution) => {
-    Alert.alert('Delete contribution', `${formatCurrency(c.amount, goal.currency_symbol ?? 'RON', 2)} on ${c.date}`, [
+    Alert.alert('Delete contribution', `${formatCurrency(c.amount, goalView.currency_symbol ?? 'RON', 2)} on ${c.date}`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
         await removeContribution(c.id, goal.id, c.amount);
@@ -145,6 +159,31 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
     key: c.code, label: c.code, sublabel: c.name, icon: c.symbol,
   }));
 
+  const handleDeadlineChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDeadlinePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setDeadline(toISODate(selectedDate));
+    }
+  };
+
+  const handleStatusChange = async (nextStatus: Goal['status']) => {
+    if (localStatus === nextStatus || statusSaving || localStatus === 'completed') return;
+    const previousStatus = localStatus;
+    setLocalStatus(nextStatus);
+    setStatusSaving(true);
+    try {
+      await setStatus(goal.id, nextStatus);
+    } catch (e) {
+      setLocalStatus(previousStatus);
+      Alert.alert('Error', 'Could not update goal status.');
+      console.error(e);
+    } finally {
+      setStatusSaving(false);
+    }
+  };
+
   // ────────────────────────────────────────────────────────────────────────────
   // VIEW mode
   // ────────────────────────────────────────────────────────────────────────────
@@ -155,7 +194,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
           <TouchableOpacity onPress={onClose} style={s.headerBtn}>
             <Text style={s.headerBtnText}>‹ Back</Text>
           </TouchableOpacity>
-          <Text style={s.headerTitle} numberOfLines={1}>{goal.name}</Text>
+          <Text style={s.headerTitle} numberOfLines={1}>{goalView.name}</Text>
           <TouchableOpacity onPress={() => setIsEditing(true)} style={s.headerBtn}>
             <Text style={[s.headerBtnText, { textAlign: 'right' }]}>Edit</Text>
           </TouchableOpacity>
@@ -163,51 +202,55 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
 
         <ScrollView contentContainerStyle={s.viewBody} showsVerticalScrollIndicator={false}>
           {/* Hero */}
-          <View style={[s.heroCard, { borderColor: goal.color + '44' }]}>
-            <View style={[s.heroIcon, { backgroundColor: goal.color + '22' }]}>
-              <Text style={s.heroEmoji}>{goal.icon}</Text>
+          <View style={[s.heroCard, { borderColor: goalView.color + '44' }]}>
+            <View style={[s.heroIcon, { backgroundColor: goalView.color + '22' }]}>
+              <Text style={s.heroEmoji}>{goalView.icon}</Text>
             </View>
-            <Text style={s.heroName}>{goal.name}</Text>
-            <Text style={[s.heroAmount, { color: goal.color }]}>
-              {formatCurrency(goal.current_amount, goal.currency_symbol ?? 'RON', 0)}
+            <Text style={s.heroName}>{goalView.name}</Text>
+            <Text style={[s.heroAmount, { color: goalView.color }]}>
+              {formatCurrency(goalView.current_amount, goalView.currency_symbol ?? 'RON', 0)}
             </Text>
             <Text style={s.heroTarget}>
-              of {formatCurrency(goal.target_amount, goal.currency_symbol ?? 'RON', 0)}
+              {hasTarget
+                ? `of ${formatCurrency(goalView.target_amount, goalView.currency_symbol ?? 'RON', 0)}`
+                : 'No target set'}
             </Text>
             <View style={s.progressBg}>
-              <View style={[s.progressFill, { width: `${pct}%` as any, backgroundColor: goal.color }]} />
+              <View style={[s.progressFill, { width: `${pct}%` as any, backgroundColor: goalView.color }]} />
             </View>
-            <Text style={[s.heroPct, { color: goal.color }]}>{Math.round(pct)}%</Text>
+            <Text style={[s.heroPct, { color: goalView.color }]}>{hasTarget ? `${Math.round(pct)}%` : 'No target'}</Text>
           </View>
 
           {/* Info rows */}
           <View style={s.fieldsCard}>
-            <InfoRow label="Status" value={goal.status === 'active' ? 'Active' : goal.status === 'completed' ? 'Completed' : 'Paused'} />
+            <InfoRow label="Status" value={localStatus === 'active' ? 'Active' : localStatus === 'completed' ? 'Completed' : 'Paused'} />
             <InfoRow label="Deadline" value={deadlineFmt} />
-            <InfoRow label="Currency" value={goal.currency_code} />
-            {!!goal.note && <InfoRow label="Note" value={goal.note} isLast />}
+            <InfoRow label="Currency" value={goalView.currency_code} />
+            {!!goalView.note && <InfoRow label="Note" value={goalView.note} isLast />}
           </View>
 
           {/* Status toggle */}
-          {goal.status !== 'completed' && (
+          {localStatus !== 'completed' && (
             <View style={s.statusRow}>
               <TouchableOpacity
-                style={[s.statusBtn, goal.status === 'active' && s.statusBtnActive]}
-                onPress={() => setStatus(goal.id, 'active')}
+                style={[s.statusBtn, localStatus === 'active' && s.statusBtnActive, statusSaving && s.statusBtnDisabled]}
+                onPress={() => handleStatusChange('active')}
+                disabled={statusSaving}
               >
-                <Text style={[s.statusBtnText, goal.status === 'active' && { color: colors.accent.primary }]}>Active</Text>
+                <Text style={[s.statusBtnText, localStatus === 'active' && { color: colors.accent.primary }]}>Active</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.statusBtn, goal.status === 'paused' && s.statusBtnPaused]}
-                onPress={() => setStatus(goal.id, 'paused')}
+                style={[s.statusBtn, localStatus === 'paused' && s.statusBtnPaused, statusSaving && s.statusBtnDisabled]}
+                onPress={() => handleStatusChange('paused')}
+                disabled={statusSaving}
               >
-                <Text style={[s.statusBtnText, goal.status === 'paused' && { color: colors.warning }]}>Paused</Text>
+                <Text style={[s.statusBtnText, localStatus === 'paused' && { color: colors.warning }]}>Paused</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {/* Add contribution */}
-          {goal.status === 'active' && (
+          {localStatus === 'active' && (
             <TouchableOpacity style={s.contribBtn} onPress={() => setShowContrib(true)}>
               <Text style={s.contribBtnText}>+ Add contribution</Text>
             </TouchableOpacity>
@@ -230,8 +273,8 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
                     </Text>
                     {!!c.note && <Text style={s.contribNote}>{c.note}</Text>}
                   </View>
-                  <Text style={[s.contribAmount, { color: goal.color }]}>
-                    +{formatCurrency(c.amount, goal.currency_symbol ?? 'RON', 2)}
+                  <Text style={[s.contribAmount, { color: goalView.color }]}>
+                    +{formatCurrency(c.amount, goalView.currency_symbol ?? 'RON', 2)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -241,7 +284,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
 
           {/* Delete */}
           <TouchableOpacity style={s.deleteBtn} onPress={handleDelete} activeOpacity={0.8}>
-            <Text style={s.deleteBtnText}>🗑  Delete goal</Text>
+            <Text style={s.deleteBtnText}>Delete goal</Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -251,11 +294,12 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
           <View style={s.sheet}>
             <View style={s.sheetHandle} />
             <Text style={s.sheetTitle}>Add contribution</Text>
+            <Text style={s.sheetHint}>This is tracked as goal savings and does not increase expenses.</Text>
             <TextInput
               style={s.sheetInput}
               value={contribStr}
               onChangeText={setContribStr}
-              placeholder={`0.00 ${goal.currency_symbol ?? 'RON'}`}
+              placeholder={`0.00 ${goalView.currency_symbol ?? 'RON'}`}
               placeholderTextColor={colors.text.muted}
               keyboardType="decimal-pad"
               autoFocus
@@ -315,13 +359,13 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         />
 
         {/* Target amount */}
-        <Text style={s.label}>TARGET AMOUNT</Text>
+        <Text style={s.label}>TARGET AMOUNT (optional)</Text>
         <View style={s.row}>
           <TextInput
             style={[s.input, { flex: 1 }]}
             value={targetStr}
             onChangeText={setTargetStr}
-            placeholder="0"
+            placeholder="Leave empty"
             placeholderTextColor={colors.text.muted}
             keyboardType="decimal-pad"
           />
@@ -383,12 +427,25 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         />
       </ScrollView>
 
-      <DatePickerModal
-        visible={showDeadlinePicker}
-        value={deadline || toISODate(new Date())}
-        onChange={setDeadline}
-        onClose={() => setShowDeadlinePicker(false)}
-      />
+      {showDeadlinePicker && (
+        <View style={s.datePickerWrap}>
+          <DateTimePicker
+            value={new Date((deadline || toISODate(new Date())) + 'T12:00:00')}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            design={Platform.OS === 'android' ? 'material' : undefined}
+            themeVariant="dark"
+            textColor="#FFFFFF"
+            accentColor="#00D4AA"
+            onChange={handleDeadlineChange}
+          />
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity style={s.datePickerDoneBtn} onPress={() => setShowDeadlinePicker(false)}>
+              <Text style={s.datePickerDoneText}>Done</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       <BottomSheetPicker
         visible={showCurPicker}
         title="Select currency"
@@ -442,6 +499,7 @@ const s = StyleSheet.create({
   statusBtn:   { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: colors.bg.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default },
   statusBtnActive: { borderColor: colors.accent.primary, backgroundColor: 'rgba(0,212,170,0.1)' },
   statusBtnPaused: { borderColor: colors.warning, backgroundColor: 'rgba(251,191,36,0.1)' },
+  statusBtnDisabled: { opacity: 0.75 },
   statusBtnText:   { fontSize: 13, fontWeight: '500', color: colors.text.secondary },
 
   contribBtn:     { backgroundColor: colors.accent.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
@@ -463,6 +521,7 @@ const s = StyleSheet.create({
   sheet:      { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg.elevated, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 48, gap: 10, borderTopWidth: 1, borderTopColor: colors.border.default },
   sheetHandle:{ width: 36, height: 4, backgroundColor: colors.border.default, borderRadius: 2, alignSelf: 'center' },
   sheetTitle: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
+  sheetHint:  { fontSize: 11, color: colors.text.muted, marginTop: -4 },
   sheetInput: { backgroundColor: colors.bg.tertiary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 22, fontWeight: '600', padding: 14, textAlign: 'center' },
   sheetBtn:   { backgroundColor: colors.accent.primary, borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
   sheetBtnText:{ fontSize: 15, fontWeight: '700', color: colors.bg.primary },
@@ -477,6 +536,9 @@ const s = StyleSheet.create({
   row:       { flexDirection: 'row', gap: 8, alignItems: 'center' },
   currBtn:   { backgroundColor: colors.bg.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, paddingHorizontal: 14, height: 52, justifyContent: 'center' },
   currBtnText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
+  datePickerWrap:    { backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: colors.border.default, paddingVertical: 8 },
+  datePickerDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
+  datePickerDoneText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
   grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   iconBtn:   { width: 52, height: 52, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center' },
   iconText:  { fontSize: 24 },
