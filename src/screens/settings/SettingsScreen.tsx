@@ -30,8 +30,8 @@ interface SectionItem {
 
 export default function SettingsScreen() {
   const {
-    pinEnabled, biometricEnabled, currency, autoBackup,
-    setPinEnabled, setBiometricEnabled, setCurrency, setAutoBackup,
+    pinEnabled, biometricEnabled, currency, autoBackup, showGoalsTab,
+    setPinEnabled, setBiometricEnabled, setCurrency, setAutoBackup, setShowGoalsTab,
   } = useSettingsStore();
 
   const [showPinSetup, setShowPinSetup]       = useState(false);
@@ -118,6 +118,7 @@ export default function SettingsScreen() {
       items: [
         { icon: '💱', bg: 'rgba(139,92,246,0.15)', label: 'Main currency', sub: currency, arrow: true, onPress: () => setShowCurrency(true) },
         { icon: '🏷️', bg: 'rgba(20,184,166,0.15)',   label: 'Categories', sub: 'Manage custom categories', arrow: true, onPress: () => setShowCategories(true) },
+        { icon: '🎯', bg: 'rgba(249,115,22,0.15)', label: 'Goals tab', sub: showGoalsTab ? 'Shown' : 'Hidden', toggle: true, value: showGoalsTab, onToggle: setShowGoalsTab },
       ],
     },
   ];

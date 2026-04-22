@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors } from '../theme';
+import { useSettingsStore } from '../store/slices/settingsSlice';
 import HomeScreen     from '../screens/home/HomeScreen';
 import GoalsScreen    from '../screens/goals/GoalsScreen';
 import ReportsScreen  from '../screens/reports/ReportsScreen';
@@ -19,6 +20,8 @@ function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focu
 }
 
 export default function MainTabNavigator() {
+  const { showGoalsTab } = useSettingsStore();
+
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false, tabBarStyle: s.tabBar, tabBarShowLabel: false }}
@@ -33,11 +36,13 @@ export default function MainTabNavigator() {
         component={ReportsScreen}
         options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="📊" label="Reports" focused={focused} /> }}
       />
-      <Tab.Screen
-        name="Goals"
-        component={GoalsScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🎯" label="Goals" focused={focused} /> }}
-      />
+      {showGoalsTab && (
+        <Tab.Screen
+          name="Goals"
+          component={GoalsScreen}
+          options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🎯" label="Goals" focused={focused} /> }}
+        />
+      )}
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}

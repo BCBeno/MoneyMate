@@ -8,6 +8,7 @@ interface SettingsState {
   pinEnabled: boolean;
   biometricEnabled: boolean;
   autoBackup: boolean;
+  showGoalsTab: boolean;
   isLocked: boolean;
   isLoading: boolean;
   loadSettings: () => Promise<void>;
@@ -15,6 +16,7 @@ interface SettingsState {
   setPinEnabled: (enabled: boolean) => Promise<void>;
   setBiometricEnabled: (enabled: boolean) => Promise<void>;
   setAutoBackup: (enabled: boolean) => Promise<void>;
+  setShowGoalsTab: (enabled: boolean) => Promise<void>;
   unlock: () => void;
   lock: () => void;
 }
@@ -24,6 +26,7 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
   pinEnabled: false,
   biometricEnabled: false,
   autoBackup: false,
+  showGoalsTab: true,
   isLocked: false,
   isLoading: true,
 
@@ -37,6 +40,7 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
         pinEnabled: settings.pin_enabled === '1',
         biometricEnabled: settings.biometric_enabled === '1',
         autoBackup: settings.auto_backup === '1',
+        showGoalsTab: settings.show_goals_tab === '1' || settings.show_goals_tab === undefined,
         isLocked: settings.pin_enabled === '1',
         isLoading: false,
       });
@@ -61,6 +65,10 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
   setAutoBackup: async (enabled) => {
     await setSetting('auto_backup', enabled ? '1' : '0');
     set({ autoBackup: enabled });
+  },
+  setShowGoalsTab: async (enabled) => {
+    await setSetting('show_goals_tab', enabled ? '1' : '0');
+    set({ showGoalsTab: enabled });
   },
   unlock: () => set({ isLocked: false }),
   lock: () => set({ isLocked: true }),
