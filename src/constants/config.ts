@@ -1,6 +1,6 @@
 export const CONFIG = {
   APP_NAME: 'MoneyMate',
-  VERSION: '1.0.3',
+  VERSION: '1.0.4',
   DB_NAME: 'moneymate.db',
   DB_VERSION: 1,
   PIN_LENGTH: 4,

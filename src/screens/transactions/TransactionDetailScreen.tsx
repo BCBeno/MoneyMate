@@ -309,10 +309,6 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
             value={new Date(date + 'T12:00:00')}
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            design={Platform.OS === 'android' ? 'material' : undefined}
-            themeVariant="dark"
-            textColor="#FFFFFF"
-            accentColor="#00D4AA"
             onChange={handleDateChange}
           />
           {Platform.OS === 'ios' && (

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Modal, TextInput, Alert, ScrollView,
+  Modal, TextInput, ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
@@ -40,6 +40,7 @@ export default function CategoriesScreen({ onClose }: Props) {
   const [newColor, setNewColor] = useState('#F97316');
   const [formType, setFormType] = useState<'expense' | 'income'>('expense');
   const [saving, setSaving]     = useState(false);
+  const [nameError, setNameError] = useState('');
 
   const load = useCallback(async () => {
     const cats = await getCategories();
@@ -78,7 +79,10 @@ export default function CategoriesScreen({ onClose }: Props) {
   };
 
   const persistSave = async () => {
-    if (!newName.trim()) { Alert.alert('Error', 'Please enter a name.'); return; }
+    if (!newName.trim()) {
+      setNameError('Name is required');
+      return;
+    }
     setSaving(true);
     try {
       if (editingCategory) {
@@ -91,7 +95,7 @@ export default function CategoriesScreen({ onClose }: Props) {
       await reloadTransactions();
       closeForm();
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Could not save.');
+      console.error(e);
     } finally {
       setSaving(false);
     }
@@ -201,14 +205,20 @@ export default function CategoriesScreen({ onClose }: Props) {
           </View>
 
           {/* Name */}
-          <TextInput
-            style={s.input}
-            value={newName}
-            onChangeText={setNewName}
-            placeholder="Category name..."
-            placeholderTextColor={colors.text.muted}
-            autoFocus
-          />
+          <View>
+            <TextInput
+              style={[s.input, nameError && s.inputError]}
+              value={newName}
+              onChangeText={(text) => {
+                setNewName(text);
+                setNameError('');
+              }}
+              placeholder="Category name..."
+              placeholderTextColor={colors.text.muted}
+              autoFocus
+            />
+            {nameError && <Text style={s.errorMessage}>{nameError}</Text>}
+          </View>
 
           {/* Icon picker */}
           <Text style={s.pickerLabel}>ICON</Text>
@@ -292,6 +302,8 @@ const s = StyleSheet.create({
   previewName: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
 
   input:       { backgroundColor: colors.bg.tertiary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 15, paddingHorizontal: 14, height: 48 },
+  inputError:  { borderWidth: 2, borderColor: colors.expense },
+  errorMessage: { fontSize: 12, color: colors.expense, marginTop: 6, marginLeft: 2 },
 
   pickerLabel: { fontSize: 10, fontWeight: '600', color: colors.text.muted, letterSpacing: 0.8 },
   iconBtn:     { width: 44, height: 44, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center', marginRight: 6 },

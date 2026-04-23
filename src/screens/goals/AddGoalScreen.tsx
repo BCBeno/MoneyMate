@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, TextInput, Alert,
+  ScrollView, TextInput,
   Platform,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -29,22 +29,30 @@ export default function AddGoalScreen({ onClose }: Props) {
   const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
   const [showCurPicker, setShowCurPicker]           = useState(false);
   const [saving, setSaving]     = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [targetError, setTargetError] = useState('');
   const { add } = useGoalsStore();
 
   const handleSave = async () => {
     const targetInput = targetStr.trim();
     const target = targetInput === '' ? 0 : parseFloat(targetInput);
-    if (!name.trim()) { Alert.alert('Error', 'Please enter a name.'); return; }
-    if (targetInput !== '' && (isNaN(target) || target <= 0)) {
-      Alert.alert('Error', 'If target is set, it must be greater than 0.');
-      return;
+    let hasError = false;
+
+    if (!name.trim()) {
+      setNameError('Name is required');
+      hasError = true;
     }
+    if (targetInput !== '' && (isNaN(target) || target <= 0)) {
+      setTargetError('Target must be greater than 0');
+      hasError = true;
+    }
+    if (hasError) return;
+
     setSaving(true);
     try {
       await add({ name: name.trim(), target_amount: target, currency_code: currency, icon, color, deadline: deadline || undefined });
       onClose();
     } catch (e) {
-      Alert.alert('Error', 'Could not save goal.');
       console.error(e);
     } finally {
       setSaving(false);
@@ -85,28 +93,40 @@ export default function AddGoalScreen({ onClose }: Props) {
           <Text style={s.previewName}>{name || 'My goal'}</Text>
         </View>
 
-        <Text style={s.label}>NAME</Text>
-        <TextInput
-          style={s.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="E.g. Summer vacation"
-          placeholderTextColor={colors.text.muted}
-        />
-
-        <Text style={s.label}>TARGET AMOUNT (optional)</Text>
-        <View style={s.row}>
+        <View>
+          <Text style={s.label}>NAME</Text>
           <TextInput
-            style={[s.input, { flex: 1 }]}
-            value={targetStr}
-            onChangeText={setTargetStr}
-            placeholder="Select a target amount (optional)"
+            style={[s.input, nameError && s.inputError]}
+            value={name}
+            onChangeText={(text) => {
+              setName(text);
+              setNameError('');
+            }}
+            placeholder="E.g. Summer vacation"
             placeholderTextColor={colors.text.muted}
-            keyboardType="decimal-pad"
           />
-          <TouchableOpacity style={s.currBtn} onPress={() => setShowCurPicker(true)}>
-            <Text style={s.currBtnText}>{currency} ›</Text>
-          </TouchableOpacity>
+          {nameError && <Text style={s.errorMessage}>{nameError}</Text>}
+        </View>
+
+        <View>
+          <Text style={s.label}>TARGET AMOUNT (optional)</Text>
+          <View style={s.row}>
+            <TextInput
+              style={[s.input, { flex: 1 }, targetError && s.inputError]}
+              value={targetStr}
+              onChangeText={(text) => {
+                setTargetStr(text);
+                setTargetError('');
+              }}
+              placeholder="Select a target amount (optional)"
+              placeholderTextColor={colors.text.muted}
+              keyboardType="decimal-pad"
+            />
+            <TouchableOpacity style={s.currBtn} onPress={() => setShowCurPicker(true)}>
+              <Text style={s.currBtnText}>{currency} ›</Text>
+            </TouchableOpacity>
+          </View>
+          {targetError && <Text style={s.errorMessage}>{targetError}</Text>}
         </View>
 
         <Text style={s.label}>DEADLINE</Text>
@@ -156,10 +176,6 @@ export default function AddGoalScreen({ onClose }: Props) {
             value={new Date((deadline || toISODate(new Date())) + 'T12:00:00')}
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            design={Platform.OS === 'android' ? 'material' : undefined}
-            themeVariant="dark"
-            textColor="#FFFFFF"
-            accentColor="#00D4AA"
             onChange={handleDeadlineChange}
           />
           {Platform.OS === 'ios' && (
@@ -193,6 +209,8 @@ const s = StyleSheet.create({
   previewName: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
   label:     { fontSize: 10, fontWeight: '600', color: colors.text.muted, letterSpacing: 0.8 },
   input:     { backgroundColor: colors.bg.tertiary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 15, paddingHorizontal: 14, height: 52, justifyContent: 'center' },
+  inputError: { borderWidth: 2, borderColor: colors.expense },
+  errorMessage: { fontSize: 12, color: colors.expense, marginTop: 6, marginLeft: 2 },
   row:       { flexDirection: 'row', gap: 8, alignItems: 'center' },
   currBtn:   { backgroundColor: colors.bg.tertiary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, paddingHorizontal: 14, height: 52, justifyContent: 'center' },
   currBtnText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },

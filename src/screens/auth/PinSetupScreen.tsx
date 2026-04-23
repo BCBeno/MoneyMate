@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../theme';
 import { savePin } from '../../services/securityService';
@@ -11,16 +11,18 @@ export default function PinSetupScreen({ onDone }: { onDone?: () => void }) {
   const [pin, setPin] = useState('');
   const [confirm, setConfirm] = useState('');
   const [step, setStep] = useState<'create'|'confirm'>('create');
+  const [error, setError] = useState('');
   const { setPinEnabled } = useSettingsStore();
   const current = step === 'create' ? pin : confirm;
   const setter  = step === 'create' ? setPin : setConfirm;
 
   const handleDigit = (d: string) => {
-    if (d === '⌫') { setter(p => p.slice(0,-1)); return; }
+    if (d === '⌫') { setter(p => p.slice(0,-1)); setError(''); return; }
     if (d === '') return;
     const next = current + d;
     if (next.length > 4) return;
     setter(next);
+    setError('');
     if (next.length === 4) {
       if (step === 'create') {
         setTimeout(() => setStep('confirm'), 300);
@@ -28,7 +30,7 @@ export default function PinSetupScreen({ onDone }: { onDone?: () => void }) {
         if (next === pin) {
           savePin(pin).then(() => setPinEnabled(true)).then(() => onDone?.());
         } else {
-          Alert.alert('PINs do not match', 'Please try again.');
+          setError('PINs do not match');
           setConfirm(''); setPin(''); setStep('create');
         }
       }
@@ -44,6 +46,7 @@ export default function PinSetupScreen({ onDone }: { onDone?: () => void }) {
           <View key={i} style={[s.dot, current.length > i && s.dotFilled]} />
         ))}
       </View>
+      {error && <Text style={s.errorText}>{error}</Text>}
       <View style={s.pad}>
         {DIGITS.map((row, ri) => (
           <View key={ri} style={s.row}>
@@ -65,6 +68,7 @@ const s = StyleSheet.create({
   sub:        { fontSize:14, color:colors.text.secondary },
   dots:       { flexDirection:'row', gap:16, marginVertical:spacing.xl },
   dot:        { width:16, height:16, borderRadius:8, borderWidth:2, borderColor:colors.accent.primary },
+  errorText:  { fontSize:13, color:colors.expense, fontWeight:'600' },
   dotFilled:  { backgroundColor:colors.accent.primary },
   pad:        { gap:spacing.md },
   row:        { flexDirection:'row', gap:spacing.md },

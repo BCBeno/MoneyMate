@@ -13,17 +13,23 @@ interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
   rightIcon?: React.ReactNode;
   onRightIconPress?: () => void;
+  required?: boolean;
 }
 
 export default function Input({
   label, error, prefix, suffix, containerStyle,
-  rightIcon, onRightIconPress, ...props
+  rightIcon, onRightIconPress, required, ...props
 }: InputProps) {
   const [focused, setFocused] = useState(false);
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>{label}</Text>
+          {required && <Text style={styles.requiredMarker}>*</Text>}
+        </View>
+      )}
       <View style={[
         styles.inputWrap,
         focused && styles.inputFocused,
@@ -51,13 +57,15 @@ export default function Input({
 
 const styles = StyleSheet.create({
   container: { gap: spacing.xs },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   label: { fontSize: 12, fontWeight: '500', color: colors.text.secondary, letterSpacing: 0.5 },
+  requiredMarker: { fontSize: 12, fontWeight: '600', color: colors.expense },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.bg.tertiary,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border.default,
     paddingHorizontal: spacing.md,
     height: 52,

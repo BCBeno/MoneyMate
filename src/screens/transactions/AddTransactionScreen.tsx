@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, TextInput,
+  ScrollView, TextInput,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -33,6 +33,8 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
   const [showCatPicker, setShowCatPicker]   = useState(false);
   const [showCurPicker, setShowCurPicker]   = useState(false);
   const [saving, setSaving]         = useState(false);
+  const [amountError, setAmountError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
   const amountRef = useRef<TextInput>(null);
   const { add } = useTransactionsStore();
 
@@ -43,7 +45,6 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
     }).catch(console.error);
   }, [type]);
 
-  // Allow digits and at most one decimal separator (dot or comma)
   const handleAmountChange = (text: string) => {
     const normalized = text.replace(',', '.');
     const cleaned    = normalized.replace(/[^0-9.]/g, '');
@@ -51,20 +52,25 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
     if (parts.length > 2) return;
     if (parts.length === 2 && parts[1].length > 2) return;
     setAmountStr(cleaned);
+    setAmountError('');
   };
 
   const numericAmount = (): number => parseFloat(amountStr) || 0;
 
   const handleSave = async () => {
     const num = numericAmount();
+    let hasError = false;
+
     if (!amountStr || num <= 0) {
-      Alert.alert('Invalid amount', 'Enter an amount greater than 0.');
-      return;
+      setAmountError('Amount must be greater than 0');
+      hasError = true;
     }
     if (!categoryId) {
-      Alert.alert('Category required', 'Please select a category.');
-      return;
+      setCategoryError('Category is required');
+      hasError = true;
     }
+    if (hasError) return;
+
     setSaving(true);
     try {
       const amount_ron = await convertToRON(num, currency);
@@ -73,13 +79,12 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
         amount:        num,
         currency_code: currency,
         amount_ron,
-        category_id:   categoryId,
+        category_id:   categoryId!,
         description:   description.trim() || undefined,
         date,
       });
       onClose();
     } catch (e) {
-      Alert.alert('Error', 'Could not save the transaction.');
       console.error(e);
     } finally {
       setSaving(false);
@@ -144,20 +149,23 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
           </View>
 
           {/* Amount */}
-          <View style={[s.amountCard, { borderColor: amountColor + '55' }]}>
-            <TextInput
-              ref={amountRef}
-              style={[s.amountInput, { color: amountColor }]}
-              value={amountStr}
-              onChangeText={handleAmountChange}
-              placeholder="0.00"
-              placeholderTextColor={colors.text.muted}
-              keyboardType="decimal-pad"
-              returnKeyType="next"
-              autoFocus
-              selectTextOnFocus
-            />
-            <Text style={s.amountCurrencyLabel}>{currency}</Text>
+          <View>
+            <View style={[s.amountCard, { borderColor: amountError ? colors.expense : amountColor + '55' }]}>
+              <TextInput
+                ref={amountRef}
+                style={[s.amountInput, { color: amountColor }]}
+                value={amountStr}
+                onChangeText={handleAmountChange}
+                placeholder="0.00"
+                placeholderTextColor={colors.text.muted}
+                keyboardType="decimal-pad"
+                returnKeyType="next"
+                autoFocus
+                selectTextOnFocus
+              />
+              <Text style={s.amountCurrencyLabel}>{currency}</Text>
+            </View>
+            {amountError && <Text style={s.errorMessage}>{amountError}</Text>}
           </View>
 
           {/* Description / note — appears as title in the transaction list */}
@@ -180,14 +188,20 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
           </View>
 
           {/* Category */}
-          <TouchableOpacity style={s.field} onPress={() => setShowCatPicker(true)}>
-            <Text style={s.fieldIcon}>{selectedCategory ? selectedCategory.icon : '📂'}</Text>
-            <Text style={s.fieldLabel}>Category</Text>
-            <Text style={[s.fieldValue, !selectedCategory && s.fieldPlaceholder]}>
-              {selectedCategory ? selectedCategory.name : 'Select...'}
-            </Text>
-            <Text style={s.fieldChevron}>›</Text>
-          </TouchableOpacity>
+          <View>
+            <TouchableOpacity 
+              style={[s.field, categoryError && s.fieldError]} 
+              onPress={() => setShowCatPicker(true)}
+            >
+              <Text style={s.fieldIcon}>{selectedCategory ? selectedCategory.icon : '📂'}</Text>
+              <Text style={s.fieldLabel}>Category</Text>
+              <Text style={[s.fieldValue, !selectedCategory && s.fieldPlaceholder]}>
+                {selectedCategory ? selectedCategory.name : 'Select...'}
+              </Text>
+              <Text style={s.fieldChevron}>›</Text>
+            </TouchableOpacity>
+            {categoryError && <Text style={s.errorMessage}>{categoryError}</Text>}
+          </View>
 
           {/* Date */}
           <TouchableOpacity style={s.field} onPress={() => setShowDatePicker(true)}>
@@ -223,10 +237,6 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
             value={new Date(date + 'T12:00:00')}
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            design={Platform.OS === 'android' ? 'material' : undefined}
-            themeVariant="dark"
-            textColor="#FFFFFF"
-            accentColor="#00D4AA"
             onChange={handleDateChange}
           />
           {Platform.OS === 'ios' && (
@@ -241,7 +251,10 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
         title="Select category"
         items={categoryItems}
         selectedKey={String(categoryId ?? '')}
-        onSelect={k => setCategoryId(Number(k))}
+        onSelect={k => {
+          setCategoryId(Number(k));
+          setCategoryError('');
+        }}
         onClose={() => setShowCatPicker(false)}
       />
       <BottomSheetPicker
@@ -308,6 +321,7 @@ const s = StyleSheet.create({
   noteClear: { fontSize: 13, color: colors.text.muted },
 
   field:            { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg.secondary, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border.default },
+  fieldError:       { borderColor: colors.expense, borderWidth: 2 },
   fieldIcon:        { fontSize: 16 },
   fieldLabel:       { fontSize: 11, color: colors.text.muted, width: 60 },
   fieldValue:       { flex: 1, fontSize: 13, color: colors.text.primary, fontWeight: '500' },
@@ -317,6 +331,8 @@ const s = StyleSheet.create({
   datePickerWrap:    { backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: colors.border.default, paddingVertical: 8 },
   datePickerDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
   datePickerDoneText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
+
+  errorMessage:  { fontSize: 12, color: colors.expense, marginTop: 6, marginLeft: 2 },
 
   saveBtn:     { borderRadius: 12, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   saveBtnText: { fontSize: 16, fontWeight: '700', color: '#0B0D12' },
