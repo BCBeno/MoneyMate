@@ -144,21 +144,6 @@ export async function deleteTransaction(id: number): Promise<void> {
   await db.runAsync(`DELETE FROM transactions WHERE id = ?`, [id]);
 }
 
-export async function getMonthlyStats(
-  months: number = 6
-): Promise<{ month: string; income: number; expenses: number }[]> {
-  const db = await getDatabase();
-  return db.getAllAsync(
-    `SELECT strftime('%Y-%m', date) AS month,
-            SUM(CASE WHEN type = 'income'  THEN amount_ron ELSE 0 END) AS income,
-            SUM(CASE WHEN type = 'expense' THEN amount_ron ELSE 0 END) AS expenses
-     FROM transactions
-     WHERE date >= date('now', '-${months} months')
-     GROUP BY month
-     ORDER BY month ASC`
-  );
-}
-
 export async function getStatsInRange(
   dateFrom: string,
   dateTo: string

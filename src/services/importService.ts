@@ -9,37 +9,40 @@ export interface ImportResult {
   errors: string[];
 }
 
-export async function importFromExternalDB(): Promise<ImportResult> {
+export async function importJSON(): Promise<ImportResult> {
   const picked = await DocumentPicker.getDocumentAsync({
-    type: ['application/json', 'application/octet-stream', 'application/x-sqlite3'],
+    type: ['application/json'],
     copyToCacheDirectory: true,
   });
-
   if (picked.canceled || !picked.assets?.[0]) {
     return { transactions: 0, categories: 0, errors: ['Import cancelled'] };
   }
-
   const asset = picked.assets[0];
   const fileName = (asset.name ?? '').toLowerCase();
   const mimeType = (asset.mimeType ?? '').toLowerCase();
-
-  const isJSON = fileName.endsWith('.json') || mimeType.includes('json');
-  const isSQLite =
-    fileName.endsWith('.db') ||
-    fileName.endsWith('.sqlite') ||
-    fileName.endsWith('.sqlite3') ||
-    mimeType.includes('sqlite') ||
-    mimeType === 'application/octet-stream';
-
-  if (isJSON) {
-    return importFromJSONFile(asset.uri);
+  if (!fileName.endsWith('.json') && !mimeType.includes('json')) {
+    return { transactions: 0, categories: 0, errors: ['Please select a .json backup file.'] };
   }
-  if (!isSQLite) {
-    return {
-      transactions: 0,
-      categories: 0,
-      errors: ['Unsupported file type. Please select a JSON or SQLite backup file.'],
-    };
+  return importFromJSONFile(asset.uri);
+}
+
+export async function importSQLite(): Promise<ImportResult> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: ['application/octet-stream', 'application/x-sqlite3', '*/*'],
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) {
+    return { transactions: 0, categories: 0, errors: ['Import cancelled'] };
+  }
+  const asset = picked.assets[0];
+  const fileName = (asset.name ?? '').toLowerCase();
+  if (
+    !fileName.endsWith('.db') &&
+    !fileName.endsWith('.sqlite') &&
+    !fileName.endsWith('.sqlite3') &&
+    !fileName.endsWith('.mmbak')
+  ) {
+    return { transactions: 0, categories: 0, errors: ['Please select a .db, .sqlite, or .mmbak file.'] };
   }
   return importFromSQLiteFile(asset.uri);
 }

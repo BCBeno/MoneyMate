@@ -15,8 +15,9 @@ export function formatCurrency(
   if (abs >= 1_000_000) {
     formatted = (abs / 1_000_000).toFixed(1) + 'M';
   } else {
-    // Always use decimals — never round to 0 unless caller explicitly passes decimals=0
-    formatted = abs.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const parts = abs.toFixed(decimals).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    formatted = parts.length > 1 ? parts.join(',') : parts[0];
   }
 
   return symbol ? `${formatted} ${symbol}` : formatted;

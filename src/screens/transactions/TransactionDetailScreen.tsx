@@ -18,7 +18,7 @@ import { convertToRON } from '../../services/currencyService';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { toISODate } from '../../utils/formatDate';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import BottomSheetPicker, { PickerItem } from '../../components/common/BottomSheetPicker';
 
 interface Props {
@@ -48,9 +48,13 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
   const [saving, setSaving]         = useState(false);
 
   useEffect(() => {
-    if (isEditing) {
-      getCategories(type).then(setCategories).catch(console.error);
-    }
+    if (!isEditing) return;
+    getCategories(type).then(cats => {
+      setCategories(cats);
+      if (!cats.some((c: Category) => c.id === categoryId)) {
+        setCategoryId(cats[0]?.id ?? categoryId);
+      }
+    }).catch(console.error);
   }, [isEditing, type]);
 
   const handleAmountChange = (text: string) => {
@@ -196,7 +200,7 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
             )}
             <DetailRow
               label="Added"
-              value={format(new Date(current.created_at), 'd MMM yyyy, HH:mm')}
+              value={format(parseISO(current.created_at.replace(' ', 'T') + 'Z'), 'd MMM yyyy, HH:mm')}
               isLast
             />
           </View>

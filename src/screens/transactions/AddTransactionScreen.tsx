@@ -272,7 +272,7 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: colors.bg.elevated },
   header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border.default },
-  screenLabel:  { fontSize: 9, color: colors.accent.primary, letterSpacing: 1.2, fontWeight: '600' },
+  screenLabel:  { fontSize: 11, color: colors.accent.primary, letterSpacing: 1.2, fontWeight: '600' },
   closeBtn:     { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.bg.tertiary, alignItems: 'center', justifyContent: 'center' },
   closeBtnText: { color: colors.text.secondary, fontSize: 12 },
 

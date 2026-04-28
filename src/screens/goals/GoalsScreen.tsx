@@ -133,7 +133,7 @@ export default function GoalsScreen() {
               </View>
 
               <View style={s.progressBg}>
-                <View style={[s.progressFill, { width: `${pct}%` as any, backgroundColor: goal.color }]} />
+                <View style={[s.progressFill, { width: pct > 0 ? `${pct}%` as any : 3, backgroundColor: goal.color }]} />
               </View>
 
               <View style={s.cardFooter}>
@@ -183,7 +183,7 @@ export default function GoalsScreen() {
 const s = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.bg.primary },
   content:     { padding: 12, gap: 10, paddingBottom: 100 },
-  screenLabel: { fontSize: 9, color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1.2, opacity: 0.85, marginBottom: 4 },
+  screenLabel: { fontSize: 11, color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1.2, opacity: 0.85, marginBottom: 4 },
 
   emptyWrap:  { alignItems: 'center', paddingVertical: 48, gap: 8 },
   emptyEmoji: { fontSize: 48 },
@@ -222,7 +222,7 @@ const s = StyleSheet.create({
   badgeActive:{ backgroundColor: 'rgba(0,212,170,0.12)' },
   badgeDone:  { backgroundColor: 'rgba(52,211,153,0.12)' },
   badgePaused:{ backgroundColor: 'rgba(251,191,36,0.12)' },
-  badgeText:  { fontSize: 9, fontWeight: '600' },
+  badgeText:  { fontSize: 10, fontWeight: '600' },
 
   progressBg:   { height: 6, backgroundColor: colors.bg.elevated, borderRadius: 3, overflow: 'hidden', marginBottom: 8 },
   progressFill: { height: 6, borderRadius: 3 },

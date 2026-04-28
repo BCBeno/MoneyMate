@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList,
   TouchableOpacity, Dimensions, Modal,
@@ -180,7 +180,7 @@ function CategoryModal({ filter, onClose, onDataChanged }: { filter: CatFilter; 
                   <TouchableOpacity key={t.id} style={cm.row} onPress={() => setSelected(t)} activeOpacity={0.75}>
                     <View style={cm.info}>
                       <Text style={cm.name} numberOfLines={1}>{t.description || t.category_name}</Text>
-                      <Text style={cm.date}>{t.date}</Text>
+                      <Text style={cm.date}>{formatDate(t.date)}</Text>
                     </View>
                     <Text style={[cm.amount, { color: t.type === 'income' ? colors.income : colors.expense }]}>
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount_ron, 'RON', 2)}
@@ -234,7 +234,7 @@ const cm = StyleSheet.create({
   title:     { fontSize: 15, fontWeight: '600', color: colors.text.primary },
   list:      { padding: 12, paddingBottom: 40 },
   group:     { marginBottom: 12 },
-  dateLabel: { fontSize: 9, fontWeight: '600', color: colors.text.muted, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
+  dateLabel: { fontSize: 10, fontWeight: '600', color: colors.text.muted, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
   row:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(30,38,64,0.5)' },
   info:      { flex: 1 },
   name:      { fontSize: 13, fontWeight: '500', color: colors.text.primary },
@@ -296,10 +296,6 @@ export default function ReportsScreen() {
     }, [loadPieMonthData])
   );
 
-  useEffect(() => {
-    loadPieMonthData();
-  }, [loadPieMonthData]);
-
   const income   = calculateIncome(transactions);
   const expenses = calculateExpenses(transactions);
 
@@ -360,53 +356,59 @@ export default function ReportsScreen() {
         )}
 
         {/* Donut + category breakdown */}
-        {catWithPct.length > 0 && (
-          <View style={s.card}>
-            <View style={s.cardHeaderRow}>
-              <Text style={s.cardTitle}>Expenses by Category</Text>
-              <TouchableOpacity
-                style={s.monthFilterBtn}
-                onPress={() => setMonthPickerVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={s.monthFilterText}>{pieMonthLabel}</Text>
-              </TouchableOpacity>
+        <View style={s.card}>
+          <View style={s.cardHeaderRow}>
+            <Text style={s.cardTitle}>Expenses by Category</Text>
+            <TouchableOpacity
+              style={s.monthFilterBtn}
+              onPress={() => setMonthPickerVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={s.monthFilterText}>{pieMonthLabel}</Text>
+            </TouchableOpacity>
+          </View>
+          {catWithPct.length === 0 ? (
+            <View style={s.pieEmpty}>
+              <Text style={s.emptyText}>No expenses for this month</Text>
             </View>
-            <View style={s.donutRow}>
-              <DonutChart data={catWithPct} />
-              <View style={s.donutLegend}>
+          ) : (
+            <>
+              <View style={s.donutRow}>
+                <DonutChart data={catWithPct} />
+                <View style={s.donutLegend}>
+                  {catWithPct.map((c, i) => (
+                    <TouchableOpacity key={i} style={s.donutItem}
+                      onPress={() => setCatFilter({ categoryId: c.id, categoryName: c.name, categoryIcon: c.icon, dateFrom, dateTo })}
+                      activeOpacity={0.7}>
+                      <View style={[s.dot, { backgroundColor: c.color }]} />
+                      <Text style={s.donutText} numberOfLines={1}>{c.icon} {c.name}</Text>
+                      <Text style={[s.donutPct, { color: c.color }]}>{Math.round(c.pct)}%</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Category bar list */}
+              <View style={s.catList}>
                 {catWithPct.map((c, i) => (
-                  <TouchableOpacity key={i} style={s.donutItem}
+                  <TouchableOpacity key={i} style={s.catRow}
                     onPress={() => setCatFilter({ categoryId: c.id, categoryName: c.name, categoryIcon: c.icon, dateFrom, dateTo })}
                     activeOpacity={0.7}>
-                    <View style={[s.dot, { backgroundColor: c.color }]} />
-                    <Text style={s.donutText} numberOfLines={1}>{c.icon} {c.name}</Text>
-                    <Text style={[s.donutPct, { color: c.color }]}>{Math.round(c.pct)}%</Text>
+                    <Text style={s.catIcon}>{c.icon}</Text>
+                    <View style={s.catInfo}>
+                      <View style={s.catLabelRow}>
+                        <Text style={s.catName} numberOfLines={1}>{c.name}</Text>
+                        <Text style={s.catAmt}>{formatCurrency(c.amount, 'RON', 0)}</Text>
+                      </View>
+                      <View style={s.track}><View style={[s.fill, { width: `${c.pct}%` as any, backgroundColor: c.color }]} /></View>
+                    </View>
+                    <Text style={s.chevron}>›</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
-
-            {/* Category bar list */}
-            <View style={s.catList}>
-              {catWithPct.map((c, i) => (
-                <TouchableOpacity key={i} style={s.catRow}
-                  onPress={() => setCatFilter({ categoryId: c.id, categoryName: c.name, categoryIcon: c.icon, dateFrom, dateTo })}
-                  activeOpacity={0.7}>
-                  <Text style={s.catIcon}>{c.icon}</Text>
-                  <View style={s.catInfo}>
-                    <View style={s.catLabelRow}>
-                      <Text style={s.catName} numberOfLines={1}>{c.name}</Text>
-                      <Text style={s.catAmt}>{formatCurrency(c.amount, 'RON', 0)}</Text>
-                    </View>
-                    <View style={s.track}><View style={[s.fill, { width: `${c.pct}%` as any, backgroundColor: c.color }]} /></View>
-                  </View>
-                  <Text style={s.chevron}>›</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
+            </>
+          )}
+        </View>
 
         {!loading && transactions.length === 0 && (
           <View style={s.empty}><Text style={s.emptyEmoji}>📊</Text><Text style={s.emptyText}>No transactions in this period</Text></View>
@@ -447,7 +449,7 @@ export default function ReportsScreen() {
 const s = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.bg.primary },
   content:     { padding: 12, gap: 10, paddingBottom: 100 },
-  screenLabel: { fontSize: 9, color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1.2, opacity: 0.85 },
+  screenLabel: { fontSize: 11, color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1.2, opacity: 0.85 },
   loading:     { textAlign: 'center', fontSize: 12, color: colors.text.muted, paddingVertical: 8 },
 
   periodRow:           { flexDirection: 'row', gap: 6 },
@@ -496,6 +498,7 @@ const s = StyleSheet.create({
   fill:       { height: 4, borderRadius: 2 },
   chevron:    { fontSize: 16, color: colors.text.muted },
 
+  pieEmpty:   { alignItems: 'center', paddingVertical: 24 },
   empty:      { alignItems: 'center', paddingVertical: 32, gap: 8 },
   emptyEmoji: { fontSize: 36 },
   emptyText:  { fontSize: 13, color: colors.text.muted },

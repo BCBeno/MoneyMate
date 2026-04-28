@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Modal,
+  TextInput, Modal, Alert,
   Platform,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -116,7 +116,6 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
       };
       await edit(goal.id, dto);
       setIsEditing(false);
-      onClose();
     } catch (e) {
       console.error(e);
     } finally {
@@ -227,7 +226,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
                 : 'No target set'}
             </Text>
             <View style={s.progressBg}>
-              <View style={[s.progressFill, { width: `${pct}%` as any, backgroundColor: goalView.color }]} />
+              <View style={[s.progressFill, { width: pct > 0 ? `${pct}%` as any : 3, backgroundColor: goalView.color }]} />
             </View>
             <Text style={[s.heroPct, { color: goalView.color }]}>{hasTarget ? `${Math.round(pct)}%` : 'No target'}</Text>
           </View>

@@ -8,7 +8,7 @@ import { colors } from '../../theme';
 import { useSettingsStore } from '../../store/slices/settingsSlice';
 import { deletePin, isBiometricAvailable } from '../../services/securityService';
 import { exportToJSON, exportToCSV, exportToSQLite } from '../../services/exportService';
-import { importFromExternalDB } from '../../services/importService';
+import { importJSON, importSQLite } from '../../services/importService';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
 import PinSetupScreen from '../auth/PinSetupScreen';
 import CategoriesScreen from './CategoriesScreen';
@@ -74,7 +74,7 @@ export default function SettingsScreen() {
   const handleExportSQLite = withLoading(setExportingDB,     exportToSQLite);
 
   const handleImportJSON = withLoading(setImportingJSON, async () => {
-    const result = await importFromExternalDB();
+    const result = await importJSON();
     Alert.alert(
       'Import complete',
       `${result.transactions} transaction${result.transactions === 1 ? '' : 's'} imported.${result.errors.length > 0 ? '\n' + result.errors.length + ' error(s).' : ''}`
@@ -82,7 +82,7 @@ export default function SettingsScreen() {
   });
 
   const handleImportDB = withLoading(setImportingDB, async () => {
-    const result = await importFromExternalDB();
+    const result = await importSQLite();
     Alert.alert(
       'Import complete',
       `${result.transactions} transaction${result.transactions === 1 ? '' : 's'} imported.${result.errors.length > 0 ? '\n' + result.errors.length + ' error(s).' : ''}`
@@ -212,10 +212,10 @@ export default function SettingsScreen() {
 const s = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.bg.primary },
   content:     { padding: 12, gap: 4, paddingBottom: 100 },
-  screenLabel: { fontSize: 9, color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1.2, opacity: 0.85, marginBottom: 8 },
+  screenLabel: { fontSize: 11, color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1.2, opacity: 0.85, marginBottom: 8 },
 
   section:      { backgroundColor: colors.bg.secondary, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: colors.border.default, overflow: 'hidden' },
-  sectionTitle: { fontSize: 9, fontWeight: '600', color: colors.text.muted, textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.border.default },
+  sectionTitle: { fontSize: 10, fontWeight: '600', color: colors.text.muted, textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.border.default },
   item:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 12 },
   itemBorder:   { borderBottomWidth: 1, borderBottomColor: 'rgba(30,38,64,0.5)' },
   itemLeft:     { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
