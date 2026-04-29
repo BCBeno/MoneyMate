@@ -19,6 +19,8 @@ import { formatDate } from '../../utils/formatDate';
 import { format } from 'date-fns';
 import TransactionDetailScreen from '../transactions/TransactionDetailScreen';
 import MonthPickerModal from '../../components/common/MonthPickerModal';
+import { useSettingsStore } from '../../store/slices/settingsSlice';
+import AiAnalysisCard from '../../components/reports/AiAnalysisCard';
 
 type Period = '1L' | '3L' | '1An';
 
@@ -246,6 +248,7 @@ const cm = StyleSheet.create({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function ReportsScreen() {
+  const { showAiAnalysis, currency, aiAnalysisLanguage } = useSettingsStore();
   const [period, setPeriod]       = useState<Period>('1L');
   const [transactions, setTxs]    = useState<any[]>([]);
   const [pieTransactions, setPieTransactions] = useState<any[]>([]);
@@ -413,6 +416,8 @@ export default function ReportsScreen() {
         {!loading && transactions.length === 0 && (
           <View style={s.empty}><Text style={s.emptyEmoji}>📊</Text><Text style={s.emptyText}>No transactions in this period</Text></View>
         )}
+
+        {showAiAnalysis && <AiAnalysisCard currency={currency} language={aiAnalysisLanguage} />}
       </ScrollView>
 
       <Modal

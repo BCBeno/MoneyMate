@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Modal, Alert,
-  Platform,
+  Platform, KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -300,39 +300,44 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
 
         {/* Add contribution sheet */}
         <Modal visible={showContrib} transparent animationType="slide" onRequestClose={() => setShowContrib(false)}>
-          <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setShowContrib(false)} />
-          <View style={s.sheet}>
-            <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>Add contribution</Text>
-            <Text style={s.sheetHint}>This is tracked as goal savings and does not increase expenses.</Text>
-            <TextInput
-              style={s.sheetInput}
-              value={contribStr}
-              onChangeText={(text) => {
-                setContribStr(text);
-                setContribError('');
-              }}
-              placeholder={`0.00 ${goalView.currency_symbol ?? 'RON'}`}
-              placeholderTextColor={colors.text.muted}
-              keyboardType="decimal-pad"
-              autoFocus
-            />
-            {contribError && <Text style={s.errorMessage}>{contribError}</Text>}
-            <TextInput
-              style={[s.sheetInput, { fontSize: 14, height: 44 }]}
-              value={contribNote}
-              onChangeText={setContribNote}
-              placeholder="Optional note"
-              placeholderTextColor={colors.text.muted}
-            />
-            <TouchableOpacity
-              style={s.sheetBtn}
-              onPress={handleAddContrib}
-              disabled={contribSaving}
-            >
-              <Text style={s.sheetBtnText}>{contribSaving ? '...' : 'Add'}</Text>
-            </TouchableOpacity>
-          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={s.sheetKAV}
+          >
+            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowContrib(false)} />
+            <View style={s.sheet}>
+              <View style={s.sheetHandle} />
+              <Text style={s.sheetTitle}>Add contribution</Text>
+              <Text style={s.sheetHint}>This is tracked as goal savings and does not increase expenses.</Text>
+              <TextInput
+                style={s.sheetInput}
+                value={contribStr}
+                onChangeText={(text) => {
+                  setContribStr(text);
+                  setContribError('');
+                }}
+                placeholder={`0.00 ${goalView.currency_symbol ?? 'RON'}`}
+                placeholderTextColor={colors.text.muted}
+                keyboardType="decimal-pad"
+                autoFocus
+              />
+              {contribError && <Text style={s.errorMessage}>{contribError}</Text>}
+              <TextInput
+                style={[s.sheetInput, { fontSize: 14, height: 44 }]}
+                value={contribNote}
+                onChangeText={setContribNote}
+                placeholder="Optional note"
+                placeholderTextColor={colors.text.muted}
+              />
+              <TouchableOpacity
+                style={s.sheetBtn}
+                onPress={handleAddContrib}
+                disabled={contribSaving}
+              >
+                <Text style={s.sheetBtnText}>{contribSaving ? '...' : 'Add'}</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
       </SafeAreaView>
     );
@@ -539,8 +544,8 @@ const s = StyleSheet.create({
   deleteBtn:    { backgroundColor: 'rgba(248,113,113,0.08)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   deleteBtnText:{ fontSize: 14, fontWeight: '600', color: colors.expense },
 
-  sheetOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet:      { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg.elevated, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 48, gap: 10, borderTopWidth: 1, borderTopColor: colors.border.default },
+  sheetKAV:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  sheet:      { backgroundColor: colors.bg.elevated, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 48, gap: 10, borderTopWidth: 1, borderTopColor: colors.border.default },
   sheetHandle:{ width: 36, height: 4, backgroundColor: colors.border.default, borderRadius: 2, alignSelf: 'center' },
   sheetTitle: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
   sheetHint:  { fontSize: 11, color: colors.text.muted, marginTop: -4 },

@@ -9,6 +9,8 @@ interface SettingsState {
   biometricEnabled: boolean;
   autoBackup: boolean;
   showGoalsTab: boolean;
+  showAiAnalysis: boolean;
+  aiAnalysisLanguage: string;
   isLocked: boolean;
   isLoading: boolean;
   loadSettings: () => Promise<void>;
@@ -17,6 +19,8 @@ interface SettingsState {
   setBiometricEnabled: (enabled: boolean) => Promise<void>;
   setAutoBackup: (enabled: boolean) => Promise<void>;
   setShowGoalsTab: (enabled: boolean) => Promise<void>;
+  setShowAiAnalysis: (enabled: boolean) => Promise<void>;
+  setAiAnalysisLanguage: (lang: string) => Promise<void>;
   unlock: () => void;
   lock: () => void;
 }
@@ -27,6 +31,8 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
   biometricEnabled: false,
   autoBackup: false,
   showGoalsTab: true,
+  showAiAnalysis: false,
+  aiAnalysisLanguage: 'English',
   isLocked: false,
   isLoading: true,
 
@@ -41,6 +47,8 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
         biometricEnabled: settings.biometric_enabled === '1',
         autoBackup: settings.auto_backup === '1',
         showGoalsTab: settings.show_goals_tab === '1' || settings.show_goals_tab === undefined,
+        showAiAnalysis: settings.show_ai_analysis === '1',
+        aiAnalysisLanguage: settings.ai_analysis_language ?? 'English',
         isLocked: settings.pin_enabled === '1',
         isLoading: false,
       });
@@ -69,6 +77,14 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
   setShowGoalsTab: async (enabled) => {
     await setSetting('show_goals_tab', enabled ? '1' : '0');
     set({ showGoalsTab: enabled });
+  },
+  setShowAiAnalysis: async (enabled) => {
+    await setSetting('show_ai_analysis', enabled ? '1' : '0');
+    set({ showAiAnalysis: enabled });
+  },
+  setAiAnalysisLanguage: async (lang) => {
+    await setSetting('ai_analysis_language', lang);
+    set({ aiAnalysisLanguage: lang });
   },
   unlock: () => set({ isLocked: false }),
   lock: () => set({ isLocked: true }),

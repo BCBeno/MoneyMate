@@ -14,6 +14,12 @@ import PinSetupScreen from '../auth/PinSetupScreen';
 import CategoriesScreen from './CategoriesScreen';
 import { CONFIG } from '../../constants/config';
 
+const AI_LANGUAGES = [
+  'English', 'Romanian', 'Spanish', 'French', 'German',
+  'Italian', 'Portuguese', 'Dutch', 'Russian', 'Polish',
+  'Turkish', 'Arabic', 'Chinese', 'Japanese', 'Korean',
+];
+
 interface SectionItem {
   icon: string;
   bg: string;
@@ -30,13 +36,14 @@ interface SectionItem {
 
 export default function SettingsScreen() {
   const {
-    pinEnabled, biometricEnabled, currency, autoBackup, showGoalsTab,
-    setPinEnabled, setBiometricEnabled, setCurrency, setAutoBackup, setShowGoalsTab,
+    pinEnabled, biometricEnabled, currency, autoBackup, showGoalsTab, showAiAnalysis, aiAnalysisLanguage,
+    setPinEnabled, setBiometricEnabled, setCurrency, setAutoBackup, setShowGoalsTab, setShowAiAnalysis, setAiAnalysisLanguage,
   } = useSettingsStore();
 
-  const [showPinSetup, setShowPinSetup]       = useState(false);
-  const [showCategories, setShowCategories] = useState(false);
-  const [showCurrency, setShowCurrency] = useState(false);
+  const [showPinSetup, setShowPinSetup]         = useState(false);
+  const [showCategories, setShowCategories]     = useState(false);
+  const [showCurrency, setShowCurrency]         = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [exportingJSON, setExportingJSON]   = useState(false);
   const [exportingCSV, setExportingCSV]     = useState(false);
   const [exportingDB, setExportingDB]       = useState(false);
@@ -119,6 +126,8 @@ export default function SettingsScreen() {
         { icon: '💱', bg: 'rgba(139,92,246,0.15)', label: 'Main currency', sub: currency, arrow: true, onPress: () => setShowCurrency(true) },
         { icon: '🏷️', bg: 'rgba(20,184,166,0.15)',   label: 'Categories', sub: 'Manage custom categories', arrow: true, onPress: () => setShowCategories(true) },
         { icon: '🎯', bg: 'rgba(249,115,22,0.15)', label: 'Goals tab', sub: showGoalsTab ? 'Shown' : 'Hidden', toggle: true, value: showGoalsTab, onToggle: setShowGoalsTab },
+        { icon: '✨', bg: 'rgba(0,212,170,0.15)', label: 'AI Spending Analysis', sub: showAiAnalysis ? 'Enabled' : 'Disabled', toggle: true, value: showAiAnalysis, onToggle: setShowAiAnalysis },
+        { icon: '🌐', bg: 'rgba(96,165,250,0.15)', label: 'Analysis language', sub: aiAnalysisLanguage, arrow: true, onPress: () => setShowLanguagePicker(true), disabled: !showAiAnalysis },
       ],
     },
   ];
@@ -199,6 +208,25 @@ export default function SettingsScreen() {
       {/* PIN setup */}
       <Modal visible={showPinSetup} animationType="slide" onRequestClose={() => setShowPinSetup(false)}>
         <PinSetupScreen onDone={() => setShowPinSetup(false)} />
+      </Modal>
+
+      {/* Language picker */}
+      <Modal visible={showLanguagePicker} transparent animationType="slide" onRequestClose={() => setShowLanguagePicker(false)}>
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setShowLanguagePicker(false)} />
+        <View style={s.sheet}>
+          <View style={s.handle} />
+          <Text style={s.sheetTitle}>Analysis language</Text>
+          {AI_LANGUAGES.map(lang => (
+            <TouchableOpacity
+              key={lang}
+              style={[s.currRow, aiAnalysisLanguage === lang && s.currRowActive]}
+              onPress={() => { setAiAnalysisLanguage(lang); setShowLanguagePicker(false); }}
+            >
+              <Text style={[s.currCode, { flex: 1 }]}>{lang}</Text>
+              {aiAnalysisLanguage === lang && <Text style={s.check}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+        </View>
       </Modal>
 
       {/* Categories */}
