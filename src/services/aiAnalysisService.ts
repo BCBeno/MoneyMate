@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'openai/gpt-5.4-mini';
 
@@ -28,9 +30,9 @@ export interface AnalysisResult {
 }
 
 export async function analyzeSpending(input: AnalysisInput): Promise<AnalysisResult> {
-  const key = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
+  const key = Constants.expoConfig?.extra?.openRouterApiKey as string | undefined;
   if (!key?.trim()) {
-    throw new Error('OpenRouter API key not set. Add EXPO_PUBLIC_OPENROUTER_API_KEY to your .env file.');
+    throw new Error('OpenRouter API key not configured.');
   }
 
   const response = await fetch(OPENROUTER_URL, {

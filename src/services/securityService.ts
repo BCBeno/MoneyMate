@@ -4,15 +4,37 @@ import * as Crypto from 'expo-crypto';
 
 const LEGACY_PIN_KEY = 'moneymate_pin';
 const PIN_HASH_KEY = 'moneymate_pin_hash';
+const PIN_SALT_KEY = 'moneymate_pin_salt';
 const FAILED_ATTEMPTS_KEY = 'moneymate_failed_attempts';
 const LOCKOUT_UNTIL_KEY = 'moneymate_lockout_until';
 
-async function hashPin(pin: string): Promise<string> {
-  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, pin);
+async function generateSalt(): Promise<string> {
+  const bytes = await Crypto.getRandomBytesAsync(16);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPin(pin: string, salt: string): Promise<string> {
+  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, salt + pin);
+}
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+export async function isPinSet(): Promise<boolean> {
+  const hash = await SecureStore.getItemAsync(PIN_HASH_KEY);
+  return hash !== null;
 }
 
 export async function savePin(pin: string): Promise<void> {
-  const pinHash = await hashPin(pin);
+  const salt = await generateSalt();
+  const pinHash = await hashPin(pin, salt);
+  await SecureStore.setItemAsync(PIN_SALT_KEY, salt);
   await SecureStore.setItemAsync(PIN_HASH_KEY, pinHash);
   await SecureStore.deleteItemAsync(LEGACY_PIN_KEY);
 }
@@ -20,11 +42,12 @@ export async function savePin(pin: string): Promise<void> {
 export async function verifyPin(pin: string): Promise<boolean> {
   const storedHash = await SecureStore.getItemAsync(PIN_HASH_KEY);
   if (storedHash) {
-    const pinHash = await hashPin(pin);
-    return storedHash === pinHash;
+    const salt = (await SecureStore.getItemAsync(PIN_SALT_KEY)) ?? '';
+    const pinHash = await hashPin(pin, salt);
+    return constantTimeEqual(pinHash, storedHash);
   }
 
-  // Backward compatibility with old plain-text key; auto-migrate on successful match.
+  // Legacy plaintext migration — auto-upgrades to salted hash on first successful login.
   const legacyPin = await SecureStore.getItemAsync(LEGACY_PIN_KEY);
   if (!legacyPin || legacyPin !== pin) return false;
   await savePin(pin);

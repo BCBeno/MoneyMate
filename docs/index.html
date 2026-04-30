@@ -398,7 +398,7 @@ h2 em { font-style: italic; }
 /* ─────────────────────────────── FEATURES ── */
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1px;
   margin-top: 56px;
   border: 1px solid var(--border);
@@ -627,7 +627,7 @@ pre {
   align-items: center;
   gap: 14px;
   flex: 1;
-  max-width: 220px;
+  max-width: 200px;
 }
 .big-phone {
   width: 100%;
@@ -884,6 +884,7 @@ footer {
           <div class="ph-tabbar" style="margin-top:10px">
             <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl on">Home</span></div>
             <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">🎯</span><span class="ph-tab-lbl">Goals</span></div>
             <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl">Settings</span></div>
           </div>
         </div>
@@ -976,8 +977,22 @@ footer {
       <div class="feature-num">06</div>
       <span class="feature-icon">🔐</span>
       <div class="feature-title">PIN & Biometrics</div>
-      <div class="feature-desc">Protect your financial data with a 4-digit PIN or biometric authentication — Face ID or fingerprint. Locks automatically on app close.</div>
+      <div class="feature-desc">Protect your financial data with a 4-digit PIN or biometric authentication — Face ID or fingerprint. Auto-locks when the app goes to the background.</div>
       <span class="feature-tag">expo-local-authentication</span>
+    </div>
+    <div class="feature">
+      <div class="feature-num">07</div>
+      <span class="feature-icon">🎯</span>
+      <div class="feature-title">Savings Goals</div>
+      <div class="feature-desc">Set targets with a deadline, icon, and color. Log contributions, watch a live progress bar fill up, and toggle goals between active, completed, or paused.</div>
+      <span class="feature-tag">separate from expenses</span>
+    </div>
+    <div class="feature">
+      <div class="feature-num">08</div>
+      <span class="feature-icon">🤖</span>
+      <div class="feature-title">AI Spending Analysis</div>
+      <div class="feature-desc">GPT-powered insights via OpenRouter. Analyzes category trends, compares to the previous month, and delivers one actionable tip. Supports 15 languages.</div>
+      <span class="feature-tag">OpenRouter API</span>
     </div>
   </div>
 </section>
@@ -985,7 +1000,7 @@ footer {
 <!-- ═══════════════════ BIG PHONES ROW ═══════════════════ -->
 <section class="reveal" style="padding-top:60px">
   <div class="eyebrow">Screens</div>
-  <h2>Four screens.<br><em>Every view</em> <span>accounted for.</span></h2>
+  <h2>Five screens.<br><em>Every view</em> <span>accounted for.</span></h2>
 
   <div class="big-phones">
 
@@ -1020,6 +1035,7 @@ footer {
           <div class="ph-tabbar" style="margin-top:8px">
             <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl on">Home</span></div>
             <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">🎯</span><span class="ph-tab-lbl">Goals</span></div>
             <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl">Settings</span></div>
           </div>
         </div>
@@ -1073,11 +1089,66 @@ footer {
           <div class="ph-tabbar" style="margin-top:6px">
             <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl">Home</span></div>
             <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl on">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">🎯</span><span class="ph-tab-lbl">Goals</span></div>
             <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl">Settings</span></div>
           </div>
         </div>
       </div>
       <div class="big-phone-label">Reports</div>
+    </div>
+
+    <!-- Goals -->
+    <div class="big-phone-wrap">
+      <div class="big-phone" style="aspect-ratio:9/18">
+        <div class="big-phone-screen">
+          <div class="ph-set-lbl">GOALS</div>
+          <div class="ph-list" style="padding:0 8px">
+            <div class="ph-tx" style="padding:7px 0;align-items:flex-start">
+              <div class="ph-tx-ico" style="background:rgba(0,212,170,0.2);width:28px;height:28px;border-radius:8px;font-size:13px">🏠</div>
+              <div class="ph-tx-info" style="flex:1">
+                <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+                  <div class="ph-tx-name">New Apartment</div>
+                  <div style="font-size:7px;background:rgba(0,212,170,0.1);color:#00D4AA;border:1px solid rgba(0,212,170,0.2);border-radius:3px;padding:1px 5px">Active</div>
+                </div>
+                <div style="height:4px;background:#202028;border-radius:2px;margin-bottom:3px"><div style="height:4px;width:62%;background:#00D4AA;border-radius:2px"></div></div>
+                <div style="display:flex;justify-content:space-between"><span style="font-size:7px;color:#71717A">6,200 / 10,000 RON</span><span style="font-size:7px;font-weight:700;color:#00D4AA">62%</span></div>
+                <div style="font-size:6.5px;color:#52525B;margin-top:1px">128 days left</div>
+              </div>
+            </div>
+            <div class="ph-tx" style="padding:7px 0;align-items:flex-start">
+              <div class="ph-tx-ico" style="background:rgba(251,191,36,0.2);width:28px;height:28px;border-radius:8px;font-size:13px">✈️</div>
+              <div class="ph-tx-info" style="flex:1">
+                <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+                  <div class="ph-tx-name">Vacation Fund</div>
+                  <div style="font-size:7px;background:rgba(251,191,36,0.1);color:#FBBF24;border:1px solid rgba(251,191,36,0.2);border-radius:3px;padding:1px 5px">Active</div>
+                </div>
+                <div style="height:4px;background:#202028;border-radius:2px;margin-bottom:3px"><div style="height:4px;width:35%;background:#FBBF24;border-radius:2px"></div></div>
+                <div style="display:flex;justify-content:space-between"><span style="font-size:7px;color:#71717A">700 / 2,000 RON</span><span style="font-size:7px;font-weight:700;color:#FBBF24">35%</span></div>
+                <div style="font-size:6.5px;color:#52525B;margin-top:1px">62 days left</div>
+              </div>
+            </div>
+            <div class="ph-tx" style="padding:7px 0;align-items:flex-start;border:none">
+              <div class="ph-tx-ico" style="background:rgba(52,211,153,0.2);width:28px;height:28px;border-radius:8px;font-size:13px">💻</div>
+              <div class="ph-tx-info" style="flex:1">
+                <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+                  <div class="ph-tx-name">New Laptop</div>
+                  <div style="font-size:7px;background:rgba(52,211,153,0.1);color:#34D399;border:1px solid rgba(52,211,153,0.2);border-radius:3px;padding:1px 5px">Done</div>
+                </div>
+                <div style="height:4px;background:#202028;border-radius:2px;margin-bottom:3px"><div style="height:4px;width:100%;background:#34D399;border-radius:2px"></div></div>
+                <div style="display:flex;justify-content:space-between"><span style="font-size:7px;color:#71717A">5,000 / 5,000 RON</span><span style="font-size:7px;font-weight:700;color:#34D399">100%</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="ph-fab" style="bottom:44px">+</div>
+          <div class="ph-tabbar" style="margin-top:auto">
+            <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl">Home</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">🎯</span><span class="ph-tab-lbl on">Goals</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl">Settings</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="big-phone-label">Goals</div>
     </div>
 
     <!-- Settings -->
@@ -1094,16 +1165,22 @@ footer {
             <div class="ph-set-sec-title">EXPORT DATA</div>
             <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(0,212,170,0.15)">📤</div><div class="ph-set-info"><div class="ph-set-title">Export JSON</div><div class="ph-set-sub">Full backup</div></div><div class="ph-set-arrow">›</div></div>
             <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(52,211,153,0.15)">📊</div><div class="ph-set-info"><div class="ph-set-title">Export CSV</div><div class="ph-set-sub">Spreadsheet format</div></div><div class="ph-set-arrow">›</div></div>
-            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(96,165,250,0.15)">🗄️</div><div class="ph-set-info"><div class="ph-set-title">Export SQLite</div><div class="ph-set-sub">Full database (.db)</div></div><div class="ph-set-arrow">›</div></div>
           </div>
           <div class="ph-set-section">
             <div class="ph-set-sec-title">PREFERENCES</div>
-            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(139,92,246,0.15)">💱</div><div class="ph-set-info"><div class="ph-set-title">Main currency</div><div class="ph-set-sub">USD</div></div><div class="ph-set-arrow">›</div></div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(139,92,246,0.15)">💱</div><div class="ph-set-info"><div class="ph-set-title">Main currency</div><div class="ph-set-sub">RON</div></div><div class="ph-set-arrow">›</div></div>
             <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(20,184,166,0.15)">🏷️</div><div class="ph-set-info"><div class="ph-set-title">Categories</div><div class="ph-set-sub">Manage custom categories</div></div><div class="ph-set-arrow">›</div></div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(251,191,36,0.15)">🎯</div><div class="ph-set-info"><div class="ph-set-title">Goals tab</div><div class="ph-set-sub">Show in navigation</div></div><div class="ph-toggle-on"></div></div>
+          </div>
+          <div class="ph-set-section">
+            <div class="ph-set-sec-title">AI ANALYSIS</div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(96,165,250,0.15)">🤖</div><div class="ph-set-info"><div class="ph-set-title">AI Analysis</div><div class="ph-set-sub">Spending insights</div></div><div class="ph-toggle-on"></div></div>
+            <div class="ph-set-row"><div class="ph-set-ico" style="background:rgba(139,92,246,0.15)">🌐</div><div class="ph-set-info"><div class="ph-set-title">Language</div><div class="ph-set-sub">English</div></div><div class="ph-set-arrow">›</div></div>
           </div>
           <div class="ph-tabbar" style="margin-top:auto">
             <div class="ph-tab"><span class="ph-tab-ico">🏠</span><span class="ph-tab-lbl">Home</span></div>
             <div class="ph-tab"><span class="ph-tab-ico">📊</span><span class="ph-tab-lbl">Reports</span></div>
+            <div class="ph-tab"><span class="ph-tab-ico">🎯</span><span class="ph-tab-lbl">Goals</span></div>
             <div class="ph-tab"><span class="ph-tab-ico">⚙️</span><span class="ph-tab-lbl on">Settings</span></div>
           </div>
         </div>
@@ -1131,6 +1208,7 @@ footer {
         <div class="tech-row"><span class="tech-icon">📐</span><div class="tech-info"><div class="tech-name">TypeScript</div><div class="tech-desc">Strict mode, full type safety</div></div><span class="tech-ver">strict</span></div>
         <div class="tech-row"><span class="tech-icon">📊</span><div class="tech-info"><div class="tech-name">react-native-svg</div><div class="tech-desc">Custom charts — no chart libraries</div></div><span class="tech-ver">latest</span></div>
         <div class="tech-row"><span class="tech-icon">🧭</span><div class="tech-info"><div class="tech-name">React Navigation</div><div class="tech-desc">Bottom tabs + stack navigator</div></div><span class="tech-ver">v7</span></div>
+        <div class="tech-row"><span class="tech-icon">🤖</span><div class="tech-info"><div class="tech-name">OpenRouter API</div><div class="tech-desc">GPT-powered spending analysis (opt-in)</div></div><span class="tech-ver">GPT-4o-mini</span></div>
       </div>
     </div>
   </div>
@@ -1142,7 +1220,7 @@ footer {
   <h2><em>Local-first.</em> <span>No accounts.</span><br>Your data is yours.</h2>
   <p class="section-lead">Everything lives on-device in a SQLite file. No cloud sync, no user accounts, no subscriptions. Export at any time.</p>
 
-  <div class="schema-grid">
+  <div class="schema-grid" style="grid-template-columns: repeat(3, 1fr)">
     <div class="schema-card">
       <div class="schema-head"><span style="font-size:14px">📋</span><span class="schema-table-name">transactions</span></div>
       <div class="schema-body">
@@ -1185,8 +1263,38 @@ footer {
         <div class="schema-field"><span class="sf-col">updated_at</span><span class="sf-type">DATETIME</span></div>
         <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,0.04)">
           <div style="font-family:'DM Mono',monospace;font-size:10px;color:#3F3F46;margin-bottom:6px;letter-spacing:0.5px">KEYS</div>
-          <div class="schema-field" style="padding:4px 0"><span class="sf-col" style="font-size:11px">currency</span><span class="sf-type">default 'USD'</span></div>
-          <div class="schema-field" style="padding:4px 0;border:none"><span class="sf-col" style="font-size:11px">pin_enabled</span><span class="sf-type">'0' | '1'</span></div>
+          <div class="schema-field" style="padding:4px 0"><span class="sf-col" style="font-size:11px">currency</span><span class="sf-type">default 'RON'</span></div>
+          <div class="schema-field" style="padding:4px 0"><span class="sf-col" style="font-size:11px">pin_enabled</span><span class="sf-type">'0' | '1'</span></div>
+          <div class="schema-field" style="padding:4px 0"><span class="sf-col" style="font-size:11px">show_goals_tab</span><span class="sf-type">'0' | '1'</span></div>
+          <div class="schema-field" style="padding:4px 0;border:none"><span class="sf-col" style="font-size:11px">show_ai_analysis</span><span class="sf-type">'0' | '1'</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="schema-card">
+      <div class="schema-head"><span style="font-size:14px">🎯</span><span class="schema-table-name">goals</span></div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-col">id<span class="sf-pk">PK</span></span><span class="sf-type">INTEGER</span></div>
+        <div class="schema-field"><span class="sf-col">name</span><span class="sf-type">TEXT</span></div>
+        <div class="schema-field"><span class="sf-col">target_amount</span><span class="sf-type">REAL</span></div>
+        <div class="schema-field"><span class="sf-col">current_amount</span><span class="sf-type">REAL</span></div>
+        <div class="schema-field"><span class="sf-col">currency_code</span><span class="sf-type">TEXT → currencies</span></div>
+        <div class="schema-field"><span class="sf-col">icon</span><span class="sf-type">TEXT (emoji)</span></div>
+        <div class="schema-field"><span class="sf-col">color</span><span class="sf-type">TEXT (hex)</span></div>
+        <div class="schema-field"><span class="sf-col">deadline</span><span class="sf-type">DATE?</span></div>
+        <div class="schema-field"><span class="sf-col">status</span><span class="sf-type">'active'|'completed'|'paused'</span></div>
+      </div>
+    </div>
+    <div class="schema-card">
+      <div class="schema-head"><span style="font-size:14px">💰</span><span class="schema-table-name">goal_contributions</span></div>
+      <div class="schema-body">
+        <div class="schema-field"><span class="sf-col">id<span class="sf-pk">PK</span></span><span class="sf-type">INTEGER</span></div>
+        <div class="schema-field"><span class="sf-col">goal_id</span><span class="sf-type">INTEGER → goals</span></div>
+        <div class="schema-field"><span class="sf-col">amount</span><span class="sf-type">REAL</span></div>
+        <div class="schema-field"><span class="sf-col">note</span><span class="sf-type">TEXT?</span></div>
+        <div class="schema-field"><span class="sf-col">date</span><span class="sf-type">DATE</span></div>
+        <div class="schema-field"><span class="sf-col">created_at</span><span class="sf-type">DATETIME</span></div>
+        <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,0.04)">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:#3F3F46;letter-spacing:0.5px">Tracked separately from expenses</div>
         </div>
       </div>
     </div>
@@ -1262,14 +1370,14 @@ footer {
   </p>
   <div class="cta-buttons">
     <a href="https://github.com/BCBeno/MoneyMate" class="btn-primary">⭐ Star on GitHub</a>
-    <a href="https://github.com/BCBeno/MoneyMate/releases/download/v1.0.5/money-mate.apk" class="btn-secondary">📥 Download APK</a>
+    <a href="https://github.com/BCBeno/MoneyMate/releases/download/v1.1.0/money-mate.apk" class="btn-secondary">📥 Download APK</a>
   </div>
 </div>
 
 <!-- ═══════════════════ FOOTER ═══════════════════ -->
 <footer>
   <div class="footer-brand">Money<span>Mate</span></div>
-  <div class="footer-right">MIT · React Native · Expo SDK 54 · SQLite</div>
+  <div class="footer-right">MIT · React Native · Expo SDK 54 · SQLite · OpenRouter</div>
 </footer>
 
 <script>

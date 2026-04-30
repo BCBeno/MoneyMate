@@ -23,6 +23,10 @@ export async function importJSON(): Promise<ImportResult> {
   if (!fileName.endsWith('.json') && !mimeType.includes('json')) {
     return { transactions: 0, categories: 0, errors: ['Please select a .json backup file.'] };
   }
+  const MAX_JSON_BYTES = 50 * 1024 * 1024; // 50 MB
+  if (asset.size != null && asset.size > MAX_JSON_BYTES) {
+    return { transactions: 0, categories: 0, errors: ['File is too large (max 50 MB).'] };
+  }
   return importFromJSONFile(asset.uri);
 }
 

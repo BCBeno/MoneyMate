@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { runMigrations } from '../../database/migrations';
 import { seedDatabase } from '../../database/seeds';
 import { getAllSettings, setSetting } from '../../database/repositories/settingsRepository';
+import { isPinSet } from '../../services/securityService';
 
 interface SettingsState {
   currency: string;
@@ -54,7 +55,13 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
       });
     } catch (e) {
       console.error('loadSettings error:', e);
-      set({ isLoading: false });
+      // Fall back to SecureStore to determine lock state so a DB crash cannot bypass the lock screen.
+      try {
+        const pinSet = await isPinSet();
+        set({ isLoading: false, pinEnabled: pinSet, isLocked: pinSet });
+      } catch {
+        set({ isLoading: false });
+      }
     }
   },
 

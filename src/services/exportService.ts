@@ -15,7 +15,7 @@ export async function exportToJSON(): Promise<void> {
   const json = JSON.stringify(data, null, 2);
 
   const fileName = `MoneyMate_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.json`;
-  const filePath = FileSystem.documentDirectory + fileName;
+  const filePath = FileSystem.cacheDirectory + fileName;
 
   await FileSystem.writeAsStringAsync(filePath, json, { encoding: 'utf8' });
   await share(filePath, 'application/json');
@@ -46,7 +46,7 @@ export async function exportToCSV(): Promise<void> {
   ).join('\n');
 
   const fileName = `MoneyMate_transactions_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-  const filePath = FileSystem.documentDirectory + fileName;
+  const filePath = FileSystem.cacheDirectory + fileName;
 
   await FileSystem.writeAsStringAsync(filePath, header + lines, { encoding: 'utf8' });
   await share(filePath, 'text/csv');
@@ -62,7 +62,7 @@ export async function exportToSQLite(): Promise<void> {
   }
 
   const fileName = `MoneyMate_db_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.db`;
-  const destPath = FileSystem.documentDirectory + fileName;
+  const destPath = FileSystem.cacheDirectory + fileName;
 
   await FileSystem.copyAsync({ from: dbPath, to: destPath });
   await share(destPath, 'application/octet-stream');
@@ -73,5 +73,9 @@ async function share(filePath: string, mimeType: string): Promise<void> {
   if (!canShare) {
     throw new Error('Sharing is not available on this device.');
   }
-  await Sharing.shareAsync(filePath, { mimeType, dialogTitle: 'Export MoneyMate' });
+  try {
+    await Sharing.shareAsync(filePath, { mimeType, dialogTitle: 'Export MoneyMate' });
+  } finally {
+    await FileSystem.deleteAsync(filePath, { idempotent: true });
+  }
 }

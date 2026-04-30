@@ -77,8 +77,9 @@ export default function PinLockScreen() {
   }, [lockoutUntilTs]);
 
   const tryBiometric = async () => {
-    // Prevent concurrent biometric prompts
     if (biometricInProgress.current) return;
+    // Respect active lockout — biometrics must not bypass rate-limiting
+    if (lockoutUntilTs > 0 && lockoutUntilTs > Date.now()) return;
     biometricInProgress.current = true;
     try {
       const available = await isBiometricAvailable();

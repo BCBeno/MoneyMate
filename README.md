@@ -11,7 +11,7 @@
                           |___/                      
 ```
 
-**Personal finance tracker · Dark mode · SQLite · Multi-currency**
+**Personal finance tracker · Dark mode · SQLite · Multi-currency · AI insights · Savings goals**
 > 📱 [**View full presentation →**](https://bcbeno.github.io/MoneyMate)
 
 [![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?style=flat-square&logo=react)](https://reactnative.dev)
@@ -28,9 +28,9 @@
 
 <div align="center">
 
-| Home | Add Transaction | Reports | Settings |
-|------|----------------|---------|----------|
-| Monthly balance card, income/expenses breakdown, searchable transaction list | Manual amount input, category picker, date picker, currency selector | Bar chart, donut chart by category, drill-down into any category | PIN lock, biometrics, JSON/CSV/SQLite export, custom categories |
+| Home | Reports | Goals | Settings |
+|------|---------|-------|----------|
+| Monthly balance card, income/expenses breakdown, searchable transaction list | Bar chart, donut chart by category, drill-down, AI spending analysis | Savings goals with progress tracking, contributions, deadlines | PIN lock, biometrics, JSON/CSV/SQLite export, custom categories, AI settings |
 
 </div>
 
@@ -41,9 +41,11 @@
 - **📊 Visual reports** — Bar and donut charts showing income vs expenses. Tap any category to see its transactions. Switch between 1 month, 3 months, or 1 year views.
 - **💸 Transactions** — Add income & expenses with a category picker, date picker, and multi-currency support. Edit or delete any transaction with a single tap. Grouped by date, newest first.
 - **💱 Multi-currency** — Track transactions in RON, EUR, USD, GBP, and more. All amounts stored with a base-currency equivalent for unified reporting.
+- **🎯 Savings goals** — Create goals with a target amount, deadline, icon, and color. Log contributions, track progress with a live progress bar, and mark goals as active, completed, or paused. Contributions are tracked separately from regular transactions.
+- **🤖 AI spending analysis** — GPT-powered insights via OpenRouter. Analyzes your monthly spending by category, highlights trends, compares to the previous month, and delivers one actionable tip. Supports 15 languages.
 - **🗄️ Import & Export** — Export your data as JSON, CSV, or raw SQLite. Import from JSON backups or `.db`/`.sqlite` files. Compatible with MoneyMate backup files (`.mmbak`).
 - **🏷️ Custom categories** — 11 built-in categories for income and expenses. Create unlimited custom categories with any emoji icon and color.
-- **🔐 PIN & Biometrics** — Protect your data with a 4-digit PIN or Face ID / fingerprint authentication.
+- **🔐 PIN & Biometrics** — Protect your data with a 4-digit PIN or Face ID / fingerprint authentication. Auto-locks when the app goes to the background.
 - **🌙 Dark-first design** — Pure dark theme (`#0B0D12` base, `#00D4AA` teal accent). Red border on balance card when spending exceeds income.
 
 ---
@@ -60,6 +62,7 @@
 | Navigation | React Navigation v7 (bottom tabs + stack) |
 | File I/O | expo-file-system/legacy, expo-document-picker, expo-sharing |
 | Auth | expo-local-authentication, expo-secure-store |
+| AI | OpenRouter API (GPT-4o-mini) — optional, opt-in |
 
 ---
 
@@ -67,15 +70,18 @@
 
 ```sql
 -- Core tables
-transactions  (id, type, amount, currency_code, amount_ron, category_id, date, description, note)
-categories    (id, name, icon, color, type, is_default)
-currencies    (code, name, symbol, rate_to_ron, last_updated)
-settings      (key, value, updated_at)
+transactions       (id, type, amount, currency_code, amount_ron, category_id, date, description, note)
+categories         (id, name, icon, color, type, is_default)
+currencies         (code, name, symbol, rate_to_ron, last_updated)
+settings           (key, value, updated_at)
+goals              (id, name, target_amount, current_amount, currency_code, icon, color, deadline, status, note)
+goal_contributions (id, goal_id, amount, note, date)
 
 -- Indexes
 idx_transactions_date      ON transactions(date)
 idx_transactions_category  ON transactions(category_id)
 idx_transactions_type      ON transactions(type)
+idx_goal_contributions     ON goal_contributions(goal_id)
 ```
 
 All data lives **on-device**. No accounts, no cloud, no subscriptions.
@@ -141,20 +147,23 @@ MoneyMate/
 ├── src/
 │   ├── screens/
 │   │   ├── home/           # Unified home + transactions screen
-│   │   ├── reports/        # Charts + category drill-down
-│   │   ├── settings/       # Settings, categories, PIN
+│   │   ├── reports/        # Charts + category drill-down + AI analysis card
+│   │   ├── goals/          # Savings goals list, add goal, goal detail
+│   │   ├── settings/       # Settings (security, currency, categories, AI)
 │   │   └── auth/           # PIN setup + lock screen
 │   ├── components/
-│   │   └── common/         # DatePickerModal, MonthPickerModal, BottomSheetPicker
+│   │   ├── common/         # DatePickerModal, MonthPickerModal, BottomSheetPicker
+│   │   └── reports/        # AiAnalysisCard
 │   ├── database/
-│   │   ├── repositories/   # transactionRepository, categoryRepository, ...
-│   │   ├── migrations.ts   # Schema versioning (auto-reset on upgrade)
+│   │   ├── repositories/   # transactionRepository, categoryRepository, goalRepository, ...
+│   │   ├── migrations.ts   # Schema versioning (non-destructive, never drops data)
 │   │   └── seeds.ts        # Default categories + currencies
 │   ├── services/
-│   │   ├── exportService.ts   # JSON / CSV / SQLite export
-│   │   ├── importService.ts   # JSON / SQLite import
-│   │   └── securityService.ts # PIN + biometrics
-│   ├── store/              # Zustand slices (transactions, settings)
+│   │   ├── aiAnalysisService.ts  # OpenRouter GPT analysis
+│   │   ├── exportService.ts      # JSON / CSV / SQLite export
+│   │   ├── importService.ts      # JSON / SQLite import
+│   │   └── securityService.ts    # PIN + biometrics
+│   ├── store/              # Zustand slices (transactions, settings, goals)
 │   ├── theme/              # colors.ts, typography.ts, spacing.ts
 │   └── utils/              # formatCurrency, formatDate, calculations
 ```
