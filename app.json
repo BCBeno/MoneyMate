@@ -23,7 +23,10 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B0D12"
+          "backgroundColor": "#0B0D12",
+          "image": "./assets/icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
         }
       ],
       "@react-native-community/datetimepicker",
