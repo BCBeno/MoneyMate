@@ -1,3 +1,4 @@
+import AppIcon from '../../components/common/AppIcon';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, radius } from '../../theme';
@@ -11,7 +12,7 @@ export default function CurrencyScreen({ visible, onClose }: Props) {
   const { currency, setCurrency } = useSettingsStore();
 
   return (
-    <Modal visible={visible} onClose={onClose} title="Main currency">
+    <Modal visible={visible} onClose={onClose} title="Main currency" scrollable>
       {DEFAULT_CURRENCIES.map(c => {
         const isSelected = c.code === currency;
         return (
@@ -27,7 +28,7 @@ export default function CurrencyScreen({ visible, onClose }: Props) {
                 <Text style={styles.name}>{c.name}</Text>
               </View>
             </View>
-            {isSelected && <Text style={styles.check}>✓</Text>}
+            {isSelected && <AppIcon name="check" size={20} color={colors.accent.primary} />}
           </TouchableOpacity>
         );
       })}
@@ -36,11 +37,7 @@ export default function CurrencyScreen({ visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  item: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
-    borderRadius: spacing.sm, marginBottom: 4,
-  },
+  item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, paddingHorizontal: spacing.sm, borderRadius: spacing.sm, marginBottom: 4 },
   itemSelected: { backgroundColor: colors.accent.muted },
   left: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   symbol: { fontSize: 20, width: 32, textAlign: 'center', fontWeight: '700', color: colors.text.primary },

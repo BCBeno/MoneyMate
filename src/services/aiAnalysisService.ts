@@ -1,7 +1,8 @@
 import Constants from 'expo-constants';
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'openai/gpt-5.4-mini';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const MODEL = 'gemini-3.5-flash-lite';
+const REQUEST_TIMEOUT_MS = 45_000;
 
 export interface CategoryData {
   name: string;
@@ -30,37 +31,78 @@ export interface AnalysisResult {
 }
 
 export async function analyzeSpending(input: AnalysisInput): Promise<AnalysisResult> {
-  const key = Constants.expoConfig?.extra?.openRouterApiKey as string | undefined;
-  if (!key?.trim()) {
-    throw new Error('OpenRouter API key not configured.');
+  const extra = Constants.expoConfig?.extra;
+  const key = (extra?.geminiApiKey as string | undefined)?.trim()
+    || (extra?.openRouterApiKey as string | undefined)?.trim();
+  if (!key) {
+    throw new Error('Gemini API key not configured. Set GEMINI_API_KEY and restart the app.');
   }
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key.trim()}`,
-      'HTTP-Referer': 'https://moneymate.app',
-      'X-Title': 'MoneyMate',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [{ role: 'user', content: buildPrompt(input) }],
-      max_tokens: 600,
-      temperature: 0.7,
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) {
-    const errText = await response.text().catch(() => '');
-    throw new Error(`API error (${response.status}): ${errText || response.statusText}`);
+  try {
+    const response = await fetch(GEMINI_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: 'user', content: buildPrompt(input) }],
+        max_tokens: 2048,
+        reasoning_effort: 'low',
+        temperature: 0.7,
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'spending_analysis',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: {
+                analysis: { type: 'string' },
+                tip: { type: 'string' },
+              },
+              required: ['analysis', 'tip'],
+              additionalProperties: false,
+            },
+          },
+        },
+      }),
+    });
+
+    const json = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message = typeof json?.error?.message === 'string'
+        ? json.error.message.split(key).join('[redacted]')
+        : response.statusText || 'Request failed.';
+      throw new Error(`Gemini API error (${response.status}): ${message}`);
+    }
+
+    const choice = json?.choices?.[0];
+    if (choice?.finish_reason === 'length') {
+      throw new Error('Gemini response was incomplete. Please try again.');
+    }
+    const content = choice?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) {
+      throw new Error('Gemini returned an empty response. Please try again.');
+    }
+
+    return parseResponse(content);
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error('Gemini request timed out. Please try again.');
+    }
+    if (error instanceof TypeError) {
+      throw new Error('Could not connect to Gemini. Check your internet connection and try again.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const json = await response.json();
-  const content: string = json.choices?.[0]?.message?.content ?? '';
-  if (!content) throw new Error('Empty response from AI.');
-
-  return parseResponse(content);
 }
 
 function buildPrompt(input: AnalysisInput): string {
@@ -133,19 +175,29 @@ NOTE: No previous month data available for comparison. Enable the compare toggle
 
   prompt += `
 
-Reply in exactly this format (no markdown, plain text only):
-ANALYSIS: [3-4 sentences about current spending patterns${previous ? ', compared to the same period last month,' : ''} projected budget impact based on current trajectory, days remaining, and specific budget management recommendations to optimize spending for the rest of the month. Reference specific numbers and categories.]
-
-TIP: [One actionable tip starting with a verb, based on the biggest spending category, most notable pattern, or budget adjustment needed for remaining days.]`;
+Reply with a JSON object containing exactly these two string fields (no markdown):
+"analysis": 3-4 sentences about current spending patterns${previous ? ', compared to the same period last month,' : ''} projected budget impact based on current trajectory, days remaining, and specific budget management recommendations to optimize spending for the rest of the month. Reference specific numbers and categories.
+"tip": One actionable tip starting with a verb, based on the biggest spending category, most notable pattern, or budget adjustment needed for remaining days.`;
 
   return prompt;
 }
 
 function parseResponse(raw: string): AnalysisResult {
-  const analysisMatch = raw.match(/ANALYSIS:\s*([\s\S]*?)(?=\n\nTIP:|$)/i);
-  const tipMatch = raw.match(/TIP:\s*([\s\S]*?)$/i);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''));
+  } catch {
+    throw new Error('Gemini returned an invalid analysis. Please try again.');
+  }
+
+  if (!parsed || typeof parsed !== 'object'
+    || !('analysis' in parsed) || typeof parsed.analysis !== 'string' || !parsed.analysis.trim()
+    || !('tip' in parsed) || typeof parsed.tip !== 'string') {
+    throw new Error('Gemini returned an invalid analysis. Please try again.');
+  }
+
   return {
-    analysis: analysisMatch?.[1]?.trim() ?? raw.trim(),
-    tip: tipMatch?.[1]?.trim() ?? '',
+    analysis: parsed.analysis.trim(),
+    tip: parsed.tip.trim(),
   };
 }

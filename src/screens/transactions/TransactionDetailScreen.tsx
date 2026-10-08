@@ -1,9 +1,10 @@
+import AppIcon from '../../components/common/AppIcon';
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, TextInput, Platform,
+  ScrollView, Alert, TextInput,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DatePickerModal from '../../components/common/DatePickerModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import {
@@ -17,7 +18,6 @@ import { Category } from '../../constants/categories';
 import { convertToRON } from '../../services/currencyService';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { toISODate } from '../../utils/formatDate';
 import { format, parseISO } from 'date-fns';
 import BottomSheetPicker, { PickerItem } from '../../components/common/BottomSheetPicker';
 
@@ -134,25 +134,17 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
     key: String(c.id), label: c.name, icon: c.icon, color: c.color,
   }));
   const currencyItems: PickerItem[] = DEFAULT_CURRENCIES.map(c => ({
-    key: c.code, label: c.code, sublabel: c.name, icon: c.symbol,
+    key: c.code, label: c.code, sublabel: c.name, icon: 'coins',
   }));
 
-  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    if (event.type === 'set' && selectedDate) {
-      setDate(toISODate(selectedDate));
-    }
-  };
 
   // ── View mode ─────────────────────────────────────────────────────────────
   if (!isEditing) {
     return (
       <SafeAreaView style={s.container} edges={['top', 'bottom']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={onClose} style={s.headerBtn}>
-            <Text style={s.headerBtnText}>‹ Back</Text>
+          <TouchableOpacity onPress={onClose} accessibilityLabel="Back" accessibilityRole="button" style={s.headerBtn}>
+            <AppIcon name="chevron-left" />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Details</Text>
           <TouchableOpacity
@@ -176,23 +168,23 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
           {/* Hero */}
           <View style={s.heroCard}>
             <View style={[s.heroIcon, { backgroundColor: (current.category_color ?? '#666') + '26' }]}>
-              <Text style={s.heroEmoji}>{current.category_icon ?? '💰'}</Text>
+              <AppIcon name={current.category_icon ?? 'wallet'} size={32} color={colors.text.secondary} />
             </View>
             <Text style={s.heroCategory}>{current.category_name}</Text>
             <Text style={[s.heroAmount, { color: amountColor }]}>
               {current.type === 'income' ? '+' : '-'}
-              {formatCurrency(current.amount_ron, 'RON', 2)}
+              {formatCurrency(current.amount, current.currency_code, 2)}
             </Text>
             {current.currency_code !== 'RON' && (
               <Text style={s.heroOriginal}>
-                {formatCurrency(current.amount, current.currency_code, 2)}
+                {formatCurrency(current.amount_ron, 'RON', 2)}
               </Text>
             )}
           </View>
 
           {/* Detail rows */}
           <View style={s.fieldsCard}>
-            <DetailRow label="Type" value={current.type === 'income' ? '↑ Income' : '↓ Expense'} valueColor={amountColor} />
+            <DetailRow label="Type" value={current.type === 'income' ? 'Income' : 'Expense'} valueColor={amountColor} />
             <DetailRow label="Date" value={viewDateFormatted} />
             <DetailRow label="Currency" value={current.currency_code} />
             {!!current.description && (
@@ -260,7 +252,7 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
 
         {/* Note / description */}
         <View style={s.noteCard}>
-          <Text style={s.noteIcon}>✏️</Text>
+          <AppIcon name="edit-3" size={20} color={colors.text.secondary} />
           <TextInput
             style={s.noteInput}
             value={description}
@@ -275,53 +267,41 @@ export default function TransactionDetailScreen({ transaction, onClose, onDelete
               onPress={() => setDescription('')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={s.noteClear}>✕</Text>
+              <AppIcon name="x" size={20} color={colors.text.secondary} />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Category */}
         <TouchableOpacity style={s.field} onPress={() => setShowCatPicker(true)}>
-          <Text style={s.fieldIcon}>{selectedCategory?.icon ?? '📂'}</Text>
-          <Text style={s.fieldLabel}>Category</Text>
-          <Text style={[s.fieldValue, !selectedCategory && { color: colors.text.muted }]}>
+          <AppIcon name={selectedCategory?.icon ?? 'folder'} size={22} color={colors.text.secondary} />
+          <View style={{ flex: 1, minWidth: 0 }}><Text style={s.fieldLabel}>Category</Text><Text style={[s.fieldValue, !selectedCategory && { color: colors.text.muted }]}>
             {selectedCategory?.name ?? 'Select...'}
-          </Text>
-          <Text style={s.fieldChevron}>›</Text>
+          </Text></View>
+          <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
 
         {/* Date */}
         <TouchableOpacity style={s.field} onPress={() => setShowDatePicker(true)}>
-          <Text style={s.fieldIcon}>📅</Text>
-          <Text style={s.fieldLabel}>Date</Text>
-          <Text style={s.fieldValue}>{dateFormatted}</Text>
-          <Text style={s.fieldChevron}>›</Text>
+          <AppIcon name="calendar" size={20} color={colors.text.secondary} />
+          <View style={{ flex: 1, minWidth: 0 }}><Text style={s.fieldLabel}>Date</Text><Text style={s.fieldValue}>{dateFormatted}</Text></View>
+          <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
 
         {/* Currency */}
         <TouchableOpacity style={s.field} onPress={() => setShowCurPicker(true)}>
-          <Text style={s.fieldIcon}>💱</Text>
-          <Text style={s.fieldLabel}>Currency</Text>
-          <Text style={s.fieldValue}>{currency} — {selectedCurrency?.name}</Text>
-          <Text style={s.fieldChevron}>›</Text>
+          <AppIcon name="coins" size={20} color={colors.text.secondary} />
+          <View style={{ flex: 1, minWidth: 0 }}><Text style={s.fieldLabel}>Currency</Text><Text style={s.fieldValue}>{currency} — {selectedCurrency?.name}</Text></View>
+          <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
       </ScrollView>
 
-      {showDatePicker && (
-        <View style={s.datePickerWrap}>
-          <DateTimePicker
-            value={new Date(date + 'T12:00:00')}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleDateChange}
-          />
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity style={s.datePickerDoneBtn} onPress={() => setShowDatePicker(false)}>
-              <Text style={s.datePickerDoneText}>Done</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      <DatePickerModal
+        visible={showDatePicker}
+        value={date}
+        onChange={setDate}
+        onClose={() => setShowDatePicker(false)}
+      />
       <BottomSheetPicker visible={showCatPicker} title="Select category" items={categoryItems} selectedKey={String(categoryId)} onSelect={k => setCategoryId(Number(k))} onClose={() => setShowCatPicker(false)} />
       <BottomSheetPicker visible={showCurPicker} title="Select currency" items={currencyItems} selectedKey={currency} onSelect={setCurrency} onClose={() => setShowCurPicker(false)} />
     </SafeAreaView>
@@ -342,55 +322,52 @@ function DetailRow({ label, value, valueColor, isLast }: {
 }
 
 const dr = StyleSheet.create({
-  row:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: 'rgba(30,38,64,0.5)' },
+  row:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
   rowLast: { borderBottomWidth: 0 },
-  label:   { fontSize: 13, color: colors.text.secondary },
+  label:   { fontSize: 11, color: colors.text.secondary },
   value:   { fontSize: 13, fontWeight: '500', color: colors.text.primary, maxWidth: '58%', textAlign: 'right' },
 });
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
 
-  header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border.default },
-  headerTitle:   { fontSize: 15, fontWeight: '600', color: colors.text.primary },
-  headerBtn:     { minWidth: 72, paddingVertical: 4 },
+  header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 14, borderBottomWidth: 0, borderBottomColor: colors.border.default, minHeight: 76 },
+  headerTitle:   { fontSize: 19, fontWeight: '600', color: colors.text.primary, flex: 1, textAlign: 'center' },
+  headerBtn:     { minWidth: 44, paddingVertical: 4, minHeight: 44, justifyContent: 'center' },
   headerBtnText: { fontSize: 14, color: colors.accent.primary },
 
-  viewBody:     { padding: 16, gap: 14, paddingBottom: 40 },
-  heroCard:     { backgroundColor: colors.bg.secondary, borderRadius: 16, borderWidth: 1, borderColor: colors.border.default, padding: 24, alignItems: 'center', gap: 6 },
-  heroIcon:     { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  viewBody:     { padding: 24, gap: 16, paddingBottom: 40 },
+  heroCard:     { backgroundColor: 'transparent', borderRadius: 16, borderWidth: 0, borderColor: colors.border.default, padding: 24, alignItems: 'center', gap: 12, paddingVertical: 20, paddingHorizontal: 0 },
+  heroIcon:     { width: 70, height: 70, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heroEmoji:    { fontSize: 28 },
   heroCategory: { fontSize: 13, color: colors.text.secondary, marginTop: 4 },
-  heroAmount:   { fontSize: 34, fontWeight: '700', letterSpacing: -0.5 },
+  heroAmount:   { fontSize: 36, fontWeight: '700', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   heroOriginal: { fontSize: 13, color: colors.text.muted },
 
-  fieldsCard:    { backgroundColor: colors.bg.secondary, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, overflow: 'hidden' },
-  deleteBtn:     { backgroundColor: 'rgba(248,113,113,0.08)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  fieldsCard:    { backgroundColor: colors.bg.secondary, borderRadius: 16, borderWidth: 1, borderColor: colors.border.default, overflow: 'hidden' },
+  deleteBtn:     { backgroundColor: colors.bg.negative, borderWidth: 0, borderColor: 'rgba(248,113,113,0.25)', borderRadius: 12, paddingVertical: 14, alignItems: 'center', minHeight: 52 },
   deleteBtnText: { fontSize: 14, fontWeight: '600', color: colors.expense },
 
-  editBody:       { padding: 16, gap: 12, paddingBottom: 32 },
-  typeToggle:     { flexDirection: 'row', backgroundColor: colors.bg.secondary, borderRadius: 8, padding: 2, borderWidth: 1, borderColor: colors.border.default },
-  typeBtn:        { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 6 },
-  typeBtnExpense: { backgroundColor: 'rgba(248,113,113,0.15)' },
-  typeBtnIncome:  { backgroundColor: 'rgba(52,211,153,0.15)' },
+  editBody:       { padding: 24, gap: 16, paddingBottom: 32 },
+  typeToggle:     { flexDirection: 'row', backgroundColor: colors.bg.secondary, borderRadius: 12, padding: 4, borderWidth: 0, borderColor: colors.border.default, gap: 6 },
+  typeBtn:        { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 9, minHeight: 40 },
+  typeBtnExpense: { backgroundColor: colors.bg.negative },
+  typeBtnIncome:  { backgroundColor: colors.accent.muted },
   typeBtnText:    { fontSize: 13, fontWeight: '600', color: colors.text.muted },
 
-  amountCard:          { backgroundColor: colors.bg.secondary, borderRadius: 14, borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  amountInput:         { flex: 1, fontSize: 40, fontWeight: '700', letterSpacing: -1, padding: 0 },
-  amountCurrencyLabel: { fontSize: 16, fontWeight: '600', color: colors.text.secondary, alignSelf: 'flex-end', paddingBottom: 6 },
+  amountCard:          { backgroundColor: 'transparent', borderRadius: 14, borderWidth: 0, paddingHorizontal: 20, paddingVertical: 24, flexDirection: 'column', alignItems: 'center', gap: 8 },
+  amountInput:         { flex: 0, fontSize: 46, fontWeight: '700', letterSpacing: -1, padding: 0, textAlign: 'center', width: '100%', color: colors.text.primary },
+  amountCurrencyLabel: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, alignSelf: 'center', paddingBottom: 6 },
 
-  noteCard:  { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg.secondary, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border.default },
+  noteCard:  { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg.secondary, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border.default, minHeight: 52 },
   noteIcon:  { fontSize: 15 },
-  noteInput: { flex: 1, fontSize: 14, color: colors.text.primary, padding: 0 },
+  noteInput: { flex: 1, fontSize: 16, color: colors.text.primary, padding: 0 },
   noteClear: { fontSize: 13, color: colors.text.muted },
 
-  field:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg.secondary, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border.default },
+  field:        { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bg.secondary, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border.default, minHeight: 68 },
   fieldIcon:    { fontSize: 16 },
-  fieldLabel:   { fontSize: 11, color: colors.text.muted, width: 60 },
-  fieldValue:   { flex: 1, fontSize: 13, color: colors.text.primary, fontWeight: '500' },
+  fieldLabel:   { fontSize: 11, color: colors.text.secondary, width: undefined },
+  fieldValue:   { fontSize: 14, color: colors.text.primary, fontWeight: '500' },
   fieldChevron: { fontSize: 18, color: colors.text.muted },
 
-  datePickerWrap:    { backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: colors.border.default, paddingVertical: 8 },
-  datePickerDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
-  datePickerDoneText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
 });

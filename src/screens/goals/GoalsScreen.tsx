@@ -1,6 +1,9 @@
+import { useDisplayCurrency } from '../../hooks/useDisplayCurrency';
+import { getCurrencyRate } from '../../services/currencyService';
+import AppIcon from '../../components/common/AppIcon';
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
   Modal, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +22,16 @@ const GOALS_SETUP_KEY = 'goals_setup_choice';
 
 export default function GoalsScreen() {
   const { goals, load } = useGoalsStore();
+  const { displayAmount } = useDisplayCurrency();
+  const [totalSaved, setTotalSaved] = useState<number | null>(null);
+  useEffect(() => {
+    let active = true;
+    setTotalSaved(null);
+    Promise.all(goals.map(async goal => goal.current_amount * await getCurrencyRate(goal.currency_code)))
+      .then(amounts => { if (active) setTotalSaved(amounts.reduce((sum, amount) => sum + amount, 0)); })
+      .catch(console.error);
+    return () => { active = false; };
+  }, [goals]);
   const [showAdd, setShowAdd]           = useState(false);
   const [setupChoice, setSetupChoice]   = useState<GoalSetupChoice>('unset');
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
@@ -63,12 +76,14 @@ export default function GoalsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        <Text style={s.screenLabel}>Savings Goals</Text>
+      <FlatList data={goals} keyExtractor={goal => String(goal.id)} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}
+        ListHeaderComponent={<View style={s.listHeader}>
+        <View style={s.pageHeader}><Text style={s.screenLabel}>Goals</Text><TouchableOpacity accessibilityLabel="Add goal" onPress={openAddGoal} style={s.headerAdd}><AppIcon name="plus" color={colors.accent.primary} /></TouchableOpacity></View>
+        {goals.length > 0 && <View style={s.summary}><Text style={s.summaryLabel}>TOTAL SAVED</Text><Text style={s.summaryAmount} numberOfLines={1} adjustsFontSizeToFit>{totalSaved === null ? '…' : displayAmount(totalSaved, 0)}</Text><Text style={s.summaryHint}>Across {goals.length} savings goals</Text></View>}
 
         {goals.length === 0 && (
           <View style={s.emptyWrap}>
-            <Text style={s.emptyEmoji}>🎯</Text>
+            <AppIcon name="target" size={32} color={colors.accent.primary} />
             <Text style={s.emptyTitle}>No goals yet</Text>
             <Text style={s.emptyDesc}>Set a savings goal and track your progress.</Text>
             <Text style={s.emptyHint}>Goal contributions are savings only and are not counted as expenses.</Text>
@@ -92,7 +107,8 @@ export default function GoalsScreen() {
           </View>
         )}
 
-        {goals.map(goal => {
+        </View>}
+        renderItem={({ item: goal }) => {
           const hasTarget   = goal.target_amount > 0;
           const pct         = hasTarget ? Math.min(100, (goal.current_amount / goal.target_amount) * 100) : 0;
           const days        = goal.deadline ? getDaysUntil(goal.deadline) : null;
@@ -108,13 +124,13 @@ export default function GoalsScreen() {
             >
               <View style={s.cardHeader}>
                 <View style={[s.goalIcon, { backgroundColor: goal.color + '26' }]}>
-                  <Text style={s.goalEmoji}>{goal.icon}</Text>
+                  <AppIcon name={goal.icon} size={22} color={goal.color} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.goalName}>{goal.name}</Text>
                   <Text style={s.goalSub}>
                     {isComplete
-                      ? 'Completed! 🎉'
+                      ? 'Completed'
                       : isPaused
                       ? 'Paused'
                       : days !== null
@@ -132,9 +148,9 @@ export default function GoalsScreen() {
                 </View>
               </View>
 
-              <View style={s.progressBg}>
-                <View style={[s.progressFill, { width: pct > 0 ? `${pct}%` as any : 3, backgroundColor: goal.color }]} />
-              </View>
+              {hasTarget && <View style={s.progressBg}>
+                <View style={[s.progressFill, { width: `${pct}%`, backgroundColor: goal.color }]} />
+              </View>}
 
               <View style={s.cardFooter}>
                 <Text style={s.footerText}>
@@ -148,13 +164,15 @@ export default function GoalsScreen() {
               </View>
             </TouchableOpacity>
           );
-        })}
+        }}
+        ListFooterComponent={<View style={s.listFooter}>
 
         <TouchableOpacity style={s.addCard} onPress={openAddGoal} activeOpacity={0.7}>
-          <Text style={s.addIcon}>+</Text>
+          <AppIcon name="plus" size={20} color={colors.text.secondary} />
           <Text style={s.addText}>Add new goal</Text>
         </TouchableOpacity>
-      </ScrollView>
+      <Text style={s.emptyHint}>Contributions stay separate from expenses.</Text></View>}
+      />
 
       {/* Goal detail modal */}
       <Modal
@@ -181,56 +199,47 @@ export default function GoalsScreen() {
 }
 
 const s = StyleSheet.create({
+  pageHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  headerAdd: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.accent.muted, alignItems: 'center', justifyContent: 'center' },
+  listHeader: { gap: 16, marginBottom: 16 }, listFooter: { gap: 16, marginTop: 16 },
+  summary: { padding: 20, borderRadius: 16, backgroundColor: colors.bg.balance, borderWidth: 1, borderColor: colors.border.accent },
+  summaryLabel: { fontSize: 11, letterSpacing: 1.1, fontWeight: '600', color: colors.text.secondary },
+  summaryAmount: { fontSize: 36, fontWeight: '700', letterSpacing: -1.1, color: colors.text.primary, marginVertical: 8, fontVariant: ['tabular-nums'] },
+  summaryHint: { fontSize: 12, color: colors.text.secondary },
   safe:        { flex: 1, backgroundColor: colors.bg.primary },
-  content:     { padding: 12, gap: 10, paddingBottom: 100 },
-  screenLabel: { fontSize: 11, color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1.2, opacity: 0.85, marginBottom: 4 },
+  content:     { padding: 24, gap: 16, paddingBottom: 32 },
+  screenLabel: { fontSize: 28, color: colors.text.primary, textTransform: 'none', letterSpacing: -0.6, opacity: 1, marginBottom: 16, fontWeight: '700', marginTop: 20 },
 
   emptyWrap:  { alignItems: 'center', paddingVertical: 48, gap: 8 },
   emptyEmoji: { fontSize: 48 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
+  emptyTitle: { fontSize: 20, fontWeight: '600', color: colors.text.primary },
   emptyDesc:  { fontSize: 13, color: colors.text.secondary, textAlign: 'center', paddingHorizontal: 32 },
-  emptyHint:  { fontSize: 11, color: colors.text.muted, textAlign: 'center', paddingHorizontal: 22 },
+  emptyHint:  { fontSize: 12, color: colors.text.secondary, textAlign: 'center', paddingHorizontal: 22 },
   emptyActionRow: { width: '100%', gap: 8, marginTop: 8 },
-  primaryAction: {
-    backgroundColor: colors.accent.primary,
-    borderRadius: 10,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-  },
+  primaryAction: { backgroundColor: colors.accent.primary, borderRadius: 10, height: 42, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   primaryActionText: { fontSize: 13, fontWeight: '700', color: colors.bg.primary },
-  secondaryAction: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-    backgroundColor: colors.bg.secondary,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-  },
+  secondaryAction: { borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.bg.secondary, height: 42, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   secondaryActionText: { fontSize: 13, fontWeight: '600', color: colors.text.secondary },
 
-  card:       { backgroundColor: colors.bg.secondary, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border.default },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  goalIcon:   { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  card:       { backgroundColor: colors.bg.secondary, borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: colors.border.default },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  goalIcon:   { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg.tertiary },
   goalEmoji:  { fontSize: 18 },
-  goalName:   { fontSize: 14, fontWeight: '600', color: colors.text.primary },
-  goalSub:    { fontSize: 10, color: colors.text.muted, marginTop: 1 },
+  goalName:   { fontSize: 15, fontWeight: '600', color: colors.text.primary },
+  goalSub:    { fontSize: 11, color: colors.text.secondary, marginTop: 1 },
   badge:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  badgeActive:{ backgroundColor: 'rgba(0,212,170,0.12)' },
+  badgeActive:{ backgroundColor: colors.accent.muted },
   badgeDone:  { backgroundColor: 'rgba(52,211,153,0.12)' },
   badgePaused:{ backgroundColor: 'rgba(251,191,36,0.12)' },
-  badgeText:  { fontSize: 10, fontWeight: '600' },
+  badgeText:  { fontSize: 11, fontWeight: '600' },
 
   progressBg:   { height: 6, backgroundColor: colors.bg.elevated, borderRadius: 3, overflow: 'hidden', marginBottom: 8 },
   progressFill: { height: 6, borderRadius: 3 },
-  cardFooter:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  footerText:   { fontSize: 11, color: colors.text.secondary },
+  cardFooter:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 10 },
+  footerText:   { fontSize: 13, color: colors.text.primary },
   footerPct:    { fontSize: 13, fontWeight: '700' },
 
-  addCard: { backgroundColor: 'rgba(0,212,170,0.06)', borderWidth: 1, borderColor: 'rgba(0,212,170,0.25)', borderStyle: 'dashed', borderRadius: 14, padding: 18, alignItems: 'center', gap: 4 },
+  addCard: { backgroundColor: colors.bg.tertiary, borderWidth: 0, borderColor: 'rgba(0,212,170,0.25)', borderStyle: 'solid', borderRadius: 12, padding: 18, alignItems: 'center', gap: 8, flexDirection: 'row', justifyContent: 'center', minHeight: 52 },
   addIcon: { fontSize: 22, color: colors.accent.primary },
-  addText: { fontSize: 12, color: colors.accent.primary, fontWeight: '500' },
+  addText: { fontSize: 14, color: colors.text.primary, fontWeight: '500' },
 });

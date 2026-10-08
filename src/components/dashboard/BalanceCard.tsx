@@ -46,29 +46,14 @@ export default function BalanceCard({ balance, income, expenses, symbol, month }
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border.accent,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-  },
-  label: {
-    fontSize: 11, fontWeight: '600', color: colors.text.muted,
-    letterSpacing: 1, marginBottom: spacing.sm,
-  },
+  card: { backgroundColor: colors.bg.secondary, borderRadius: radius.xl, padding: spacing.xl, borderWidth: 1, borderColor: colors.border.accent, marginHorizontal: spacing.lg, marginTop: spacing.md },
+  label: { fontSize: 11, fontWeight: '600', color: colors.text.muted, letterSpacing: 1, marginBottom: spacing.sm },
   amount: { fontSize: 38, fontWeight: '700', letterSpacing: -1.5, marginBottom: 2 },
   month: { fontSize: 13, color: colors.text.muted, marginBottom: spacing.lg },
-  row: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.bg.tertiary,
-    borderRadius: radius.md, padding: spacing.md,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg.tertiary, borderRadius: radius.md, padding: spacing.md },
   stat: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   statLabel: { fontSize: 11, color: colors.text.muted, marginBottom: 2 },
-  statAmount: { fontSize: 14, fontWeight: '600' },
+  statAmount: { fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] },
   divider: { width: 1, height: 32, backgroundColor: colors.border.default, marginHorizontal: spacing.md },
 });

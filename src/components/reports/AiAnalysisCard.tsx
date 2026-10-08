@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator,
@@ -11,6 +12,7 @@ import { getTransactions } from '../../database/repositories/transactionReposito
 import { getCategories } from '../../database/repositories/categoryRepository';
 import { calculateIncome, calculateExpenses, groupByCategory } from '../../utils/calculations';
 import MonthPickerModal from '../common/MonthPickerModal';
+import { getCurrencyRate } from '../../services/currencyService';
 
 function getPrevMonth(month: string): string {
   const [y, m] = month.split('-').map(Number);
@@ -30,7 +32,7 @@ function getMonthRange(month: string): { dateFrom: string; dateTo: string } {
   };
 }
 
-async function buildMonthData(month: string): Promise<MonthAnalysisData> {
+async function buildMonthData(month: string, rate: number): Promise<MonthAnalysisData> {
   const { dateFrom, dateTo } = getMonthRange(month);
   const [txs, cats] = await Promise.all([
     getTransactions({ dateFrom, dateTo }),
@@ -48,8 +50,8 @@ async function buildMonthData(month: string): Promise<MonthAnalysisData> {
       const cat = cats.find(c => c.id === parseInt(id, 10));
       return {
         name: cat?.name ?? 'Other',
-        icon: cat?.icon ?? '💰',
-        amount,
+        icon: cat?.icon ?? "wallet",
+        amount: amount / rate,
         pct: total > 0 ? (amount / total) * 100 : 0,
       };
     })
@@ -58,8 +60,8 @@ async function buildMonthData(month: string): Promise<MonthAnalysisData> {
 
   return {
     label: format(new Date(`${month}-15`), 'MMMM yyyy'),
-    totalIncome,
-    totalExpenses,
+    totalIncome: totalIncome / rate,
+    totalExpenses: totalExpenses / rate,
     categories,
   };
 }
@@ -82,8 +84,10 @@ export default function AiAnalysisCard({ currency, language }: Props) {
     setResult(null);
     setError(null);
     try {
-      const current = await buildMonthData(selectedMonth);
-      const previous = comparePrev ? await buildMonthData(getPrevMonth(selectedMonth)) : undefined;
+      const rate = await getCurrencyRate(currency);
+      if (!Number.isFinite(rate) || rate <= 0) throw new Error('Currency conversion is unavailable. Please try again.');
+      const current = await buildMonthData(selectedMonth, rate);
+      const previous = comparePrev ? await buildMonthData(getPrevMonth(selectedMonth), rate) : undefined;
       const res = await analyzeSpending({ current, previous, currency, language });
       setResult(res);
     } catch (e: any) {
@@ -99,7 +103,7 @@ export default function AiAnalysisCard({ currency, language }: Props) {
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerIcon}>✨</Text>
+          <AppIcon name="zap" size={20} color={colors.accent.primary} />
           <Text style={styles.headerTitle}>AI Spending Analysis</Text>
         </View>
       </View>
@@ -108,7 +112,7 @@ export default function AiAnalysisCard({ currency, language }: Props) {
         <Text style={styles.rowLabel}>Month</Text>
         <TouchableOpacity style={styles.monthBtn} onPress={() => setMonthPickerVisible(true)} activeOpacity={0.8}>
           <Text style={styles.monthBtnText}>{monthLabel}</Text>
-          <Text style={styles.chevron}>›</Text>
+          <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
       </View>
 
@@ -166,36 +170,21 @@ export default function AiAnalysisCard({ currency, language }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(0,212,170,0.2)',
-    gap: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
+  card: { backgroundColor: colors.accent.muted, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: 'rgba(0,212,170,0.2)', gap: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   headerIcon:  { fontSize: 15 },
-  headerTitle: { fontSize: 13, fontWeight: '600', color: colors.text.primary },
-  poweredBy:   { fontSize: 9, color: colors.text.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
+  headerTitle: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
+  poweredBy:   { fontSize: 11, color: colors.text.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
 
-  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  rowLabel: { fontSize: 12, color: colors.text.secondary, flex: 1 },
+  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 48, flexWrap: 'wrap' },
+  rowLabel: { fontSize: 12, color: colors.text.secondary, flex: 1, minWidth: 120 },
 
-  monthBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.bg.elevated, borderWidth: 1, borderColor: colors.border.default },
-  monthBtnText: { fontSize: 11, fontWeight: '600', color: colors.text.primary },
+  monthBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: colors.bg.elevated, borderWidth: 1, borderColor: colors.border.default, minHeight: 44 },
+  monthBtnText: { fontSize: 12, fontWeight: '600', color: colors.text.primary },
   chevron:      { fontSize: 14, color: colors.text.muted },
 
-  analyzeBtn:         { backgroundColor: colors.accent.primary, borderRadius: 10, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
+  analyzeBtn:         { backgroundColor: colors.accent.primary, borderRadius: 12, paddingVertical: 11, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
   analyzeBtnDisabled: { opacity: 0.6 },
   analyzeBtnText:     { fontSize: 13, fontWeight: '600', color: colors.text.inverse },
 
@@ -205,9 +194,9 @@ const styles = StyleSheet.create({
   resultBox:    { gap: 10 },
   analysisText: { fontSize: 13, color: colors.text.primary, lineHeight: 21 },
 
-  tipBox:    { flexDirection: 'row', backgroundColor: 'rgba(0,212,170,0.08)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0,212,170,0.2)', overflow: 'hidden' },
+  tipBox:    { flexDirection: 'row', backgroundColor: colors.bg.secondary, borderRadius: 12, borderWidth: 0, borderColor: 'rgba(0,212,170,0.2)', overflow: 'hidden' },
   tipAccent: { width: 3, backgroundColor: colors.accent.primary },
   tipContent:{ flex: 1, padding: 12, gap: 4 },
-  tipLabel:  { fontSize: 9, fontWeight: '700', color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1 },
+  tipLabel:  { fontSize: 11, fontWeight: '700', color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1 },
   tipText:   { fontSize: 12, color: colors.text.secondary, lineHeight: 18 },
 });

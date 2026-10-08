@@ -31,11 +31,6 @@ export default function Badge({ label, variant = 'default', style }: BadgeProps)
 }
 
 const styles = StyleSheet.create({
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-    alignSelf: 'flex-start',
-  },
+  badge: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.full, alignSelf: 'flex-start' },
   label: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
 });

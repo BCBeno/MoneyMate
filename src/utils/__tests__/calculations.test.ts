@@ -5,6 +5,8 @@ import {
   calculateSavingsRate,
   groupByCategory,
   groupByDate,
+  dailyExpenses,
+  dailyIncome,
 } from '../calculations';
 import { Transaction } from '../../database/repositories/transactionRepository';
 
@@ -55,5 +57,16 @@ describe('calculations utils', () => {
     expect(Object.keys(grouped)).toEqual(['2026-03-01', '2026-03-02', '2026-03-03']);
     expect(grouped['2026-03-02']).toHaveLength(2);
     expect(grouped['2026-03-02'][0].id).toBe(2);
+  });
+
+  it('keeps daily spending and income separate, using stored base amounts for mixed currencies', () => {
+    const mixed = [
+      tx({ amount: 7, amount_ron: 35, currency_code: 'EUR', date: '2026-10-07T10:00:00' }),
+      tx({ id: 2, type: 'income', amount: 8500, amount_ron: 8500, date: '2026-10-07' }),
+      tx({ id: 3, amount: 48, amount_ron: 48, date: '2026-10-07' }),
+      tx({ id: 4, type: 'income', amount_ron: 100, date: '2026-10-08' }),
+    ];
+    expect(dailyExpenses(mixed)).toEqual({'2026-10-07': 83});
+    expect(dailyIncome(mixed)).toEqual({'2026-10-07': 8500, '2026-10-08': 100});
   });
 });

@@ -1,10 +1,12 @@
+import { GOAL_ICONS, ICON_COLORS as GOAL_COLORS, resolveIconName } from '../../constants/icons';
+import AppIcon from '../../components/common/AppIcon';
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Modal, Alert,
-  Platform, KeyboardAvoidingView,
+  TextInput, Alert,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DatePickerModal from '../../components/common/DatePickerModal';
+import Modal from '../../components/common/Modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../theme';
 import {
@@ -21,8 +23,8 @@ import { enUS } from 'date-fns/locale';
 import BottomSheetPicker, { PickerItem } from '../../components/common/BottomSheetPicker';
 import { DEFAULT_CURRENCIES } from '../../constants/currencies';
 
-const GOAL_ICONS = ['🏠','🚗','✈️','💻','📱','🎓','💍','🏖️','💰','🏋️','🎸','📷','🎯','🛒','🐾'];
-const GOAL_COLORS = ['#00D4AA','#3B82F6','#F97316','#EC4899','#8B5CF6','#34D399','#F59E0B','#EF4444','#06B6D4','#10B981'];
+
+
 
 interface Props {
   goal: Goal;
@@ -42,7 +44,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
   const [name, setName]         = useState(goal.name);
   const [targetStr, setTargetStr] = useState(goal.target_amount > 0 ? String(goal.target_amount) : '');
   const [currency, setCurrency] = useState(goal.currency_code);
-  const [icon, setIcon]         = useState(goal.icon);
+  const [icon, setIcon]         = useState(resolveIconName(goal.icon));
   const [color, setColor]       = useState(goal.color);
   const [deadline, setDeadline] = useState(goal.deadline ?? '');
   const [note, setNote]         = useState(goal.note ?? '');
@@ -93,14 +95,14 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
   // ── Save edit ──
   const handleSaveEdit = async () => {
     const targetInput = targetStr.trim();
-    const target = targetInput === '' ? 0 : parseFloat(targetInput);
+    const target = targetInput === '' ? 0 : Number(targetInput.replace(',', '.'));
     let hasError = false;
 
     if (!name.trim()) {
       setNameError('Name is required');
       hasError = true;
     }
-    if (targetInput !== '' && (isNaN(target) || target <= 0)) {
+    if (targetInput !== '' && (!Number.isFinite(target) || target <= 0)) {
       setTargetError('Target must be greater than 0');
       hasError = true;
     }
@@ -125,8 +127,8 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
 
   // ── Add contribution ──
   const handleAddContrib = async () => {
-    const amount = parseFloat(contribStr);
-    if (isNaN(amount) || amount <= 0) {
+    const amount = Number(contribStr.replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) {
       setContribError('Amount must be greater than 0');
       return;
     }
@@ -167,17 +169,9 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
   };
 
   const currencyItems: PickerItem[] = DEFAULT_CURRENCIES.map(c => ({
-    key: c.code, label: c.code, sublabel: c.name, icon: c.symbol,
+    key: c.code, label: c.code, sublabel: c.name, icon: 'coins',
   }));
 
-  const handleDeadlineChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDeadlinePicker(false);
-    }
-    if (event.type === 'set' && selectedDate) {
-      setDeadline(toISODate(selectedDate));
-    }
-  };
 
   const handleStatusChange = async (nextStatus: Goal['status']) => {
     if (localStatus === nextStatus || statusSaving || localStatus === 'completed') return;
@@ -201,8 +195,8 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
     return (
       <SafeAreaView style={s.container} edges={['top', 'bottom']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={onClose} style={s.headerBtn}>
-            <Text style={s.headerBtnText}>‹ Back</Text>
+          <TouchableOpacity onPress={onClose} accessibilityLabel="Back" accessibilityRole="button" style={s.headerBtn}>
+            <AppIcon name="chevron-left" />
           </TouchableOpacity>
           <Text style={s.headerTitle} numberOfLines={1}>{goalView.name}</Text>
           <TouchableOpacity onPress={() => setIsEditing(true)} style={s.headerBtn}>
@@ -214,7 +208,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
           {/* Hero */}
           <View style={[s.heroCard, { borderColor: goalView.color + '44' }]}>
             <View style={[s.heroIcon, { backgroundColor: goalView.color + '22' }]}>
-              <Text style={s.heroEmoji}>{goalView.icon}</Text>
+              <AppIcon name={goalView.icon} size={32} color={goalView.color} />
             </View>
             <Text style={s.heroName}>{goalView.name}</Text>
             <Text style={[s.heroAmount, { color: goalView.color }]}>
@@ -225,10 +219,10 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
                 ? `of ${formatCurrency(goalView.target_amount, goalView.currency_symbol ?? 'RON', 0)}`
                 : 'No target set'}
             </Text>
-            <View style={s.progressBg}>
-              <View style={[s.progressFill, { width: pct > 0 ? `${pct}%` as any : 3, backgroundColor: goalView.color }]} />
+            {hasTarget && <View style={s.progressBg}>
+              <View style={[s.progressFill, { width: `${pct}%`, backgroundColor: goalView.color }]} />
             </View>
-            <Text style={[s.heroPct, { color: goalView.color }]}>{hasTarget ? `${Math.round(pct)}%` : 'No target'}</Text>
+            }<Text style={[s.heroPct, { color: goalView.color }]}>{hasTarget ? `${Math.round(pct)}%` : 'No target'}</Text>
           </View>
 
           {/* Info rows */}
@@ -299,15 +293,8 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         </ScrollView>
 
         {/* Add contribution sheet */}
-        <Modal visible={showContrib} transparent animationType="slide" onRequestClose={() => setShowContrib(false)}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={s.sheetKAV}
-          >
-            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowContrib(false)} />
-            <View style={s.sheet}>
-              <View style={s.sheetHandle} />
-              <Text style={s.sheetTitle}>Add contribution</Text>
+        <Modal visible={showContrib} title="Add contribution" onClose={() => setShowContrib(false)} scrollable>
+            <View style={s.sheetContent}>
               <Text style={s.sheetHint}>This is tracked as goal savings and does not increase expenses.</Text>
               <TextInput
                 style={s.sheetInput}
@@ -337,7 +324,6 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
                 <Text style={s.sheetBtnText}>{contribSaving ? '...' : 'Add'}</Text>
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
         </Modal>
       </SafeAreaView>
     );
@@ -363,7 +349,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
       <ScrollView contentContainerStyle={s.editBody} showsVerticalScrollIndicator={false}>
         {/* Preview */}
         <View style={[s.preview, { backgroundColor: color + '22', borderColor: color }]}>
-          <Text style={s.previewEmoji}>{icon}</Text>
+          <AppIcon name={icon} size={32} color={color} />
           <Text style={s.previewName}>{name || 'My goal'}</Text>
         </View>
 
@@ -399,7 +385,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
               keyboardType="decimal-pad"
             />
             <TouchableOpacity style={s.currBtn} onPress={() => setShowCurPicker(true)}>
-              <Text style={s.currBtnText}>{currency} ›</Text>
+              <Text style={s.currBtnText}>{currency}</Text>
             </TouchableOpacity>
           </View>
           {targetError && <Text style={s.errorMessage}>{targetError}</Text>}
@@ -416,7 +402,7 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         </TouchableOpacity>
         {deadline !== '' && (
           <TouchableOpacity onPress={() => setDeadline('')} style={{ alignSelf: 'flex-start' }}>
-            <Text style={{ color: colors.expense, fontSize: 12, marginTop: -4 }}>✕ Remove deadline</Text>
+            <Text style={{ color: colors.expense, fontSize: 12, marginTop: -4 }}>Remove deadline</Text>
           </TouchableOpacity>
         )}
 
@@ -427,9 +413,9 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
             <TouchableOpacity
               key={ic}
               style={[s.iconBtn, icon === ic && { borderColor: color, backgroundColor: color + '22' }]}
-              onPress={() => setIcon(ic)}
+              onPress={() => setIcon(ic)} accessibilityLabel={ic} accessibilityRole="button" accessibilityState={{selected: icon === ic}}
             >
-              <Text style={s.iconText}>{ic}</Text>
+              <AppIcon name={ic} size={22} color={color} />
             </TouchableOpacity>
           ))}
         </View>
@@ -437,11 +423,11 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         {/* Color */}
         <Text style={s.label}>COLOR</Text>
         <View style={s.colorRow}>
-          {GOAL_COLORS.map(c => (
+          {[...GOAL_COLORS, ...(GOAL_COLORS.includes(color) ? [] : [color])].map(c => (
             <TouchableOpacity
               key={c}
               style={[s.colorBtn, { backgroundColor: c }, color === c && s.colorBtnSelected]}
-              onPress={() => setColor(c)}
+              onPress={() => setColor(c)} accessibilityLabel={'Color ' + c} accessibilityRole="button" accessibilityState={{selected: color === c}} hitSlop={6}
             />
           ))}
         </View>
@@ -458,21 +444,13 @@ export default function GoalDetailScreen({ goal, onClose, onDeleted }: Props) {
         />
       </ScrollView>
 
-      {showDeadlinePicker && (
-        <View style={s.datePickerWrap}>
-          <DateTimePicker
-            value={new Date((deadline || toISODate(new Date())) + 'T12:00:00')}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleDeadlineChange}
-          />
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity style={s.datePickerDoneBtn} onPress={() => setShowDeadlinePicker(false)}>
-              <Text style={s.datePickerDoneText}>Done</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      <DatePickerModal
+        visible={showDeadlinePicker}
+        value={deadline}
+        onChange={setDeadline}
+        onClose={() => setShowDeadlinePicker(false)}
+        title="Select deadline"
+      />
       <BottomSheetPicker
         visible={showCurPicker}
         title="Select currency"
@@ -495,32 +473,32 @@ function InfoRow({ label, value, isLast }: { label: string; value: string; isLas
 }
 
 const ir = StyleSheet.create({
-  row:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: 'rgba(30,38,64,0.5)' },
+  row:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
   rowLast: { borderBottomWidth: 0 },
-  label:   { fontSize: 13, color: colors.text.secondary },
+  label:   { fontSize: 11, color: colors.text.secondary },
   value:   { fontSize: 13, fontWeight: '500', color: colors.text.primary },
 });
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
 
-  header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border.default },
-  headerTitle:   { fontSize: 15, fontWeight: '600', color: colors.text.primary, flex: 1, textAlign: 'center' },
-  headerBtn:     { minWidth: 72, paddingVertical: 4 },
+  header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 14, borderBottomWidth: 0, borderBottomColor: colors.border.default, minHeight: 76 },
+  headerTitle:   { fontSize: 19, fontWeight: '600', color: colors.text.primary, flex: 1, textAlign: 'center' },
+  headerBtn:     { minWidth: 44, paddingVertical: 4, minHeight: 44, justifyContent: 'center' },
   headerBtnText: { fontSize: 14, color: colors.accent.primary },
 
-  viewBody: { padding: 16, gap: 14, paddingBottom: 40 },
-  heroCard: { backgroundColor: colors.bg.secondary, borderRadius: 16, borderWidth: 1, padding: 24, alignItems: 'center', gap: 4 },
-  heroIcon: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  viewBody: { padding: 24, gap: 16, paddingBottom: 40 },
+  heroCard: { backgroundColor: 'transparent', borderRadius: 16, borderWidth: 0, padding: 24, alignItems: 'center', gap: 12, paddingVertical: 20, paddingHorizontal: 0 },
+  heroIcon: { width: 70, height: 70, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   heroEmoji:   { fontSize: 32 },
   heroName:    { fontSize: 16, fontWeight: '700', color: colors.text.primary },
-  heroAmount:  { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginTop: 4 },
+  heroAmount:  { fontSize: 36, fontWeight: '700', letterSpacing: -0.5, marginTop: 4, fontVariant: ['tabular-nums'] },
   heroTarget:  { fontSize: 13, color: colors.text.secondary },
   progressBg:  { width: '100%', height: 6, backgroundColor: colors.bg.elevated, borderRadius: 3, overflow: 'hidden', marginTop: 12 },
   progressFill:{ height: 6, borderRadius: 3 },
   heroPct:     { fontSize: 13, fontWeight: '700' },
 
-  fieldsCard:  { backgroundColor: colors.bg.secondary, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, overflow: 'hidden' },
+  fieldsCard:  { backgroundColor: colors.bg.secondary, borderRadius: 16, borderWidth: 1, borderColor: colors.border.default, overflow: 'hidden' },
 
   statusRow:   { flexDirection: 'row', gap: 8 },
   statusBtn:   { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: colors.bg.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default },
@@ -533,45 +511,39 @@ const s = StyleSheet.create({
   contribBtnText: { fontSize: 14, fontWeight: '700', color: colors.bg.primary },
 
   section:      { gap: 6 },
-  sectionTitle: { fontSize: 10, fontWeight: '600', color: colors.text.secondary, textTransform: 'uppercase', letterSpacing: 0.6 },
+  sectionTitle: { fontSize: 11, fontWeight: '600', color: colors.text.secondary, textTransform: 'uppercase', letterSpacing: 0.6 },
   contribItem:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bg.secondary, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border.default },
   contribLeft:  { flex: 1 },
   contribDate:  { fontSize: 13, fontWeight: '500', color: colors.text.primary },
   contribNote:  { fontSize: 11, color: colors.text.muted, marginTop: 2 },
   contribAmount:{ fontSize: 14, fontWeight: '700' },
-  contribHint:  { fontSize: 10, color: colors.text.muted, textAlign: 'center', marginTop: 2 },
+  contribHint:  { fontSize: 11, color: colors.text.muted, textAlign: 'center', marginTop: 2 },
 
-  deleteBtn:    { backgroundColor: 'rgba(248,113,113,0.08)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  deleteBtn:    { backgroundColor: colors.bg.negative, borderWidth: 0, borderColor: 'rgba(248,113,113,0.25)', borderRadius: 12, paddingVertical: 14, alignItems: 'center', minHeight: 52 },
   deleteBtnText:{ fontSize: 14, fontWeight: '600', color: colors.expense },
 
-  sheetKAV:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  sheet:      { backgroundColor: colors.bg.elevated, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 48, gap: 10, borderTopWidth: 1, borderTopColor: colors.border.default },
-  sheetHandle:{ width: 36, height: 4, backgroundColor: colors.border.default, borderRadius: 2, alignSelf: 'center' },
-  sheetTitle: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
+  sheetContent: { gap: 10 },
   sheetHint:  { fontSize: 11, color: colors.text.muted, marginTop: -4 },
-  sheetInput: { backgroundColor: colors.bg.tertiary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 22, fontWeight: '600', padding: 14, textAlign: 'center' },
-  sheetBtn:   { backgroundColor: colors.accent.primary, borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
+  sheetInput: { backgroundColor: colors.bg.secondary, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 22, fontWeight: '600', padding: 14, textAlign: 'center', minHeight: 52 },
+  sheetBtn:   { backgroundColor: colors.accent.primary, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center' },
   sheetBtnText:{ fontSize: 15, fontWeight: '700', color: colors.bg.primary },
 
   // edit mode
-  editBody:  { padding: 16, gap: 12, paddingBottom: 40 },
-  preview:   { alignItems: 'center', padding: 20, borderRadius: 14, borderWidth: 1, gap: 6 },
+  editBody:  { padding: 24, gap: 16, paddingBottom: 40 },
+  preview:   { alignItems: 'center', padding: 20, borderRadius: 16, borderWidth: 1, gap: 12, backgroundColor: colors.bg.secondary, borderColor: colors.border.default },
   previewEmoji:{ fontSize: 44 },
   previewName: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
-  label:     { fontSize: 10, fontWeight: '600', color: colors.text.muted, letterSpacing: 0.8 },
-  input:     { backgroundColor: colors.bg.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 15, paddingHorizontal: 14, height: 52, justifyContent: 'center' },
+  label:     { fontSize: 11, fontWeight: '600', color: colors.text.secondary, letterSpacing: 0.8 },
+  input:     { backgroundColor: colors.bg.secondary, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 16, paddingHorizontal: 14, height: 52, justifyContent: 'center', minHeight: 52 },
   inputError: { borderWidth: 2, borderColor: colors.expense },
   errorMessage: { fontSize: 12, color: colors.expense, marginTop: 6, marginLeft: 2 },
   row:       { flexDirection: 'row', gap: 8, alignItems: 'center' },
   currBtn:   { backgroundColor: colors.bg.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, paddingHorizontal: 14, height: 52, justifyContent: 'center' },
   currBtnText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
-  datePickerWrap:    { backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: colors.border.default, paddingVertical: 8 },
-  datePickerDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
-  datePickerDoneText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
   grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  iconBtn:   { width: 52, height: 52, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center' },
+  iconBtn:   { width: '22%', height: 60, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center' },
   iconText:  { fontSize: 24 },
-  colorRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  colorBtn:  { width: 36, height: 36, borderRadius: 18 },
+  colorRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  colorBtn:  { width: 32, height: 32, borderRadius: 16 },
   colorBtnSelected: { borderWidth: 3, borderColor: '#fff' },
 });

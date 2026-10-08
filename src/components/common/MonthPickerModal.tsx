@@ -1,71 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../../theme';
+import AppIcon from './AppIcon';
+import Modal from './Modal';
 
-interface Props {
-  visible: boolean;
-  /** 'yyyy-MM' */
-  value: string;
-  onChange: (month: string) => void;
-  onClose: () => void;
-}
-
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-];
-
-export default function MonthPickerModal({ visible, value, onChange, onClose }: Props) {
-  const [y, setY] = useState(() => parseInt(value.substring(0, 4), 10));
-  const [m, setM] = useState(() => parseInt(value.substring(5, 7), 10));
-
-  useEffect(() => {
-    setY(parseInt(value.substring(0, 4), 10));
-    setM(parseInt(value.substring(5, 7), 10));
-  }, [value]);
-
-  const confirm = () => {
-    onChange(`${y}-${String(m).padStart(2, '0')}`);
-    onClose();
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={s.overlay} onPress={onClose} />
-      <View style={s.sheet}>
-        <Text style={s.title}>Select month</Text>
-        <View style={s.row}>
-          <View style={[s.col, { flex: 2 }]}>
-            <Text style={s.colLabel}>MONTH</Text>
-            <TouchableOpacity onPress={() => setM(v => (v <= 1 ? 12 : v - 1))} style={s.arrow}><Text style={s.arrowT}>▲</Text></TouchableOpacity>
-            <Text style={s.val}>{MONTHS[m - 1]}</Text>
-            <TouchableOpacity onPress={() => setM(v => (v >= 12 ? 1 : v + 1))} style={s.arrow}><Text style={s.arrowT}>▼</Text></TouchableOpacity>
-          </View>
-          <View style={s.col}>
-            <Text style={s.colLabel}>YEAR</Text>
-            <TouchableOpacity onPress={() => setY(v => v - 1)} style={s.arrow}><Text style={s.arrowT}>▲</Text></TouchableOpacity>
-            <Text style={s.val}>{y}</Text>
-            <TouchableOpacity onPress={() => setY(v => v + 1)} style={s.arrow}><Text style={s.arrowT}>▼</Text></TouchableOpacity>
-          </View>
-        </View>
-        <TouchableOpacity style={s.confirmBtn} onPress={confirm}>
-          <Text style={s.confirmText}>Confirm</Text>
-        </TouchableOpacity>
+interface Props { visible: boolean; value: string; onChange: (month: string) => void; onClose: () => void; }
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export default function MonthPickerModal({visible, value, onChange, onClose}: Props) {
+  const [year, setYear] = useState(Number(value.slice(0, 4)));
+  const [month, setMonth] = useState(Number(value.slice(5, 7)));
+  useEffect(() => { if (visible) { setYear(Number(value.slice(0, 4))); setMonth(Number(value.slice(5, 7))); } }, [visible, value]);
+  return <Modal visible={visible} title="Choose month" onClose={onClose} scrollable>
+    <View style={s.content}>
+      <View style={s.yearRow}>
+        <TouchableOpacity style={s.arrow} accessibilityRole="button" accessibilityLabel="Previous year" onPress={() => setYear(y => Math.max(1, y - 1))}><AppIcon name="chevron-left" /></TouchableOpacity>
+        <Text style={s.year}>{year}</Text>
+        <TouchableOpacity style={s.arrow} accessibilityRole="button" accessibilityLabel="Next year" onPress={() => setYear(y => Math.min(9999, y + 1))}><AppIcon name="chevron-right" /></TouchableOpacity>
       </View>
-    </Modal>
-  );
+      <View style={s.grid}>{MONTHS.map((name, i) => <TouchableOpacity key={name} style={[s.month, month === i + 1 && s.selected]} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{selected: month === i + 1}} onPress={() => setMonth(i + 1)}><Text style={[s.monthText, month === i + 1 && s.selectedText]}>{name}</Text></TouchableOpacity>)}</View>
+      <TouchableOpacity style={s.done} accessibilityRole="button" onPress={() => { onChange(`${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}`); onClose(); }}><Text style={s.doneText}>Done</Text></TouchableOpacity>
+    </View>
+  </Modal>;
 }
-
 const s = StyleSheet.create({
-  overlay:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.65)' },
-  sheet:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg.elevated, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40, borderTopWidth: 1, borderTopColor: colors.border.default },
-  title:       { fontSize: 15, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 20 },
-  row:         { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20, gap: 12 },
-  col:         { flex: 1, alignItems: 'center', gap: 8 },
-  colLabel:    { fontSize: 10, color: colors.text.muted, fontWeight: '600', letterSpacing: 0.5 },
-  arrow:       { width: '100%', height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg.tertiary, borderRadius: 8 },
-  arrowT:      { fontSize: 14, color: colors.text.secondary },
-  val:         { fontSize: 18, fontWeight: '700', color: colors.text.primary, textAlign: 'center' },
-  confirmBtn:  { backgroundColor: colors.accent.primary, borderRadius: 12, height: 50, alignItems: 'center', justifyContent: 'center' },
-  confirmText: { fontSize: 15, fontWeight: '700', color: colors.bg.primary },
+  content: {gap: 16},
+  yearRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
+  year: {fontSize: 20, fontWeight: '600', color: colors.text.primary},
+  arrow: {width: 44, height: 44, borderRadius: 12, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center'},
+  grid: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
+  month: {width: '31%', flexGrow: 1, height: 48, borderRadius: 12, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.default, alignItems: 'center', justifyContent: 'center'},
+  selected: {backgroundColor: colors.accent.muted, borderColor: colors.accent.primary},
+  monthText: {fontSize: 14, fontWeight: '500', color: colors.text.primary},
+  selectedText: {color: colors.accent.primary},
+  done: {height: 52, borderRadius: 12, backgroundColor: colors.accent.primary, alignItems: 'center', justifyContent: 'center'},
+  doneText: {fontSize: 14, fontWeight: '600', color: colors.text.inverse},
 });

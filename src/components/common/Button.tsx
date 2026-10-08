@@ -46,28 +46,11 @@ export default function Button({
 }
 
 const styles = StyleSheet.create({
-  base: {
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  primary: {
-    backgroundColor: colors.accent.primary,
-  },
-  secondary: {
-    backgroundColor: colors.bg.tertiary,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  danger: {
-    backgroundColor: colors.expense + '22',
-    borderWidth: 1,
-    borderColor: colors.expense + '44',
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
+  base: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+  primary: { backgroundColor: colors.accent.primary },
+  secondary: { backgroundColor: colors.bg.tertiary, borderWidth: 1, borderColor: colors.border.default },
+  danger: { backgroundColor: colors.expense + '22', borderWidth: 1, borderColor: colors.expense + '44' },
+  ghost: { backgroundColor: 'transparent' },
   size_sm: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md, height: 36 },
   size_md: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, height: 48 },
   size_lg: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl, height: 56 },

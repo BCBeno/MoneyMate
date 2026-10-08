@@ -31,12 +31,7 @@ export default function CurrencyPicker({ selected, onSelect }: Props) {
 
 const styles = StyleSheet.create({
   row: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingVertical: 4 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: spacing.md, paddingVertical: 8,
-    borderRadius: radius.full, backgroundColor: colors.bg.tertiary,
-    borderWidth: 1, borderColor: colors.border.default,
-  },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.full, backgroundColor: colors.bg.tertiary, borderWidth: 1, borderColor: colors.border.default },
   chipSelected: { backgroundColor: colors.accent.muted, borderColor: colors.accent.primary },
   symbol: { fontSize: 13, fontWeight: '600', color: colors.text.secondary },
   symbolSelected: { color: colors.accent.primary },

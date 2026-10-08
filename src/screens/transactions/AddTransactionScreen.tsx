@@ -1,13 +1,15 @@
+import AppIcon from '../../components/common/AppIcon';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, TextInput,
+  ScrollView, TextInput, Alert,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DatePickerModal from '../../components/common/DatePickerModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { useTransactionsStore } from '../../store/slices/transactionsSlice';
+import { useSettingsStore } from '../../store/slices/settingsSlice';
 import { getCategories } from '../../database/repositories/categoryRepository';
 import { Category } from '../../constants/categories';
 import { convertToRON } from '../../services/currencyService';
@@ -22,10 +24,11 @@ interface Props {
 }
 
 export default function AddTransactionScreen({ onClose, defaultType = 'expense' }: Props) {
+  const preferredCurrency = useSettingsStore(state => state.currency);
   const [type, setType]             = useState<'income' | 'expense'>(defaultType);
   const [amountStr, setAmountStr]   = useState('');
   const [description, setDescription] = useState('');
-  const [currency, setCurrency]     = useState('RON');
+  const [currency, setCurrency]     = useState(preferredCurrency);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [date, setDate]             = useState(toISODate(new Date()));
   const [categories, setCategories] = useState<Category[]>([]);
@@ -39,10 +42,13 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
   const { add } = useTransactionsStore();
 
   useEffect(() => {
+    let active = true;
+    setCategories([]);
+    setCategoryId(null);
     getCategories(type).then(cats => {
-      setCategories(cats);
-      setCategoryId(null);
+      if (active) setCategories(cats);
     }).catch(console.error);
+    return () => { active = false; };
   }, [type]);
 
   const handleAmountChange = (text: string) => {
@@ -61,7 +67,7 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
     const num = numericAmount();
     let hasError = false;
 
-    if (!amountStr || num <= 0) {
+    if (!amountStr || !Number.isFinite(num) || num <= 0) {
       setAmountError('Amount must be greater than 0');
       hasError = true;
     }
@@ -85,6 +91,7 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
       });
       onClose();
     } catch (e) {
+      Alert.alert('Error', 'Could not save the transaction. Please try again.');
       console.error(e);
     } finally {
       setSaving(false);
@@ -100,25 +107,17 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
     key: String(c.id), label: c.name, icon: c.icon, color: c.color,
   }));
   const currencyItems: PickerItem[] = DEFAULT_CURRENCIES.map(c => ({
-    key: c.code, label: c.code, sublabel: c.name, icon: c.symbol,
+    key: c.code, label: c.code, sublabel: c.name, icon: 'coins',
   }));
 
-  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    if (event.type === 'set' && selectedDate) {
-      setDate(toISODate(selectedDate));
-    }
-  };
 
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.screenLabel}>ADD TRANSACTION</Text>
+        <Text style={s.screenLabel}>New transaction</Text>
         <TouchableOpacity onPress={onClose} style={s.closeBtn}>
-          <Text style={s.closeBtnText}>✕</Text>
+          <AppIcon name="x" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
       </View>
 
@@ -135,7 +134,7 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
               onPress={() => setType('expense')}
             >
               <Text style={[s.typeBtnText, type === 'expense' && { color: colors.expense }]}>
-                ↓ Expense
+                Expense
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -143,7 +142,7 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
               onPress={() => setType('income')}
             >
               <Text style={[s.typeBtnText, type === 'income' && { color: colors.income }]}>
-                ↑ Income
+                Income
               </Text>
             </TouchableOpacity>
           </View>
@@ -153,7 +152,7 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
             <View style={[s.amountCard, { borderColor: amountError ? colors.expense : amountColor + '55' }]}>
               <TextInput
                 ref={amountRef}
-                style={[s.amountInput, { color: amountColor }]}
+                style={s.amountInput}
                 value={amountStr}
                 onChangeText={handleAmountChange}
                 placeholder="0.00"
@@ -170,7 +169,7 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
 
           {/* Description / note — appears as title in the transaction list */}
           <View style={s.noteCard}>
-            <Text style={s.noteIcon}>✏️</Text>
+            <AppIcon name="edit-3" size={20} color={colors.text.secondary} />
             <TextInput
               style={s.noteInput}
               value={description}
@@ -182,7 +181,7 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
             />
             {description.length > 0 && (
               <TouchableOpacity onPress={() => setDescription('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={s.noteClear}>✕</Text>
+                <AppIcon name="x" size={20} color={colors.text.secondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -193,59 +192,47 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
               style={[s.field, categoryError && s.fieldError]} 
               onPress={() => setShowCatPicker(true)}
             >
-              <Text style={s.fieldIcon}>{selectedCategory ? selectedCategory.icon : '📂'}</Text>
-              <Text style={s.fieldLabel}>Category</Text>
-              <Text style={[s.fieldValue, !selectedCategory && s.fieldPlaceholder]}>
+              <AppIcon name={selectedCategory ? selectedCategory.icon : 'folder'} size={22} color={colors.text.secondary} />
+              <View style={{ flex: 1, minWidth: 0 }}><Text style={s.fieldLabel}>Category</Text><Text style={[s.fieldValue, !selectedCategory && s.fieldPlaceholder]}>
                 {selectedCategory ? selectedCategory.name : 'Select...'}
-              </Text>
-              <Text style={s.fieldChevron}>›</Text>
+              </Text></View>
+              <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
             </TouchableOpacity>
             {categoryError && <Text style={s.errorMessage}>{categoryError}</Text>}
           </View>
 
           {/* Date */}
           <TouchableOpacity style={s.field} onPress={() => setShowDatePicker(true)}>
-            <Text style={s.fieldIcon}>📅</Text>
-            <Text style={s.fieldLabel}>Date</Text>
-            <Text style={s.fieldValue}>{dateFormatted}</Text>
-            <Text style={s.fieldChevron}>›</Text>
+            <AppIcon name="calendar" size={20} color={colors.text.secondary} />
+            <View style={{ flex: 1, minWidth: 0 }}><Text style={s.fieldLabel}>Date</Text><Text style={s.fieldValue}>{dateFormatted}</Text></View>
+            <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
 
           {/* Currency */}
           <TouchableOpacity style={s.field} onPress={() => setShowCurPicker(true)}>
-            <Text style={s.fieldIcon}>💱</Text>
-            <Text style={s.fieldLabel}>Currency</Text>
-            <Text style={s.fieldValue}>{currency} — {selectedCurrency?.name}</Text>
-            <Text style={s.fieldChevron}>›</Text>
+            <AppIcon name="coins" size={20} color={colors.text.secondary} />
+            <View style={{ flex: 1, minWidth: 0 }}><Text style={s.fieldLabel}>Currency</Text><Text style={s.fieldValue}>{currency} — {selectedCurrency?.name}</Text></View>
+            <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
 
           {/* Save */}
           <TouchableOpacity
-            style={[s.saveBtn, { backgroundColor: amountColor }]}
+            style={[s.saveBtn, { backgroundColor: colors.accent.primary }]}
             onPress={handleSave}
             disabled={saving}
             activeOpacity={0.85}
           >
-            <Text style={s.saveBtnText}>{saving ? '...' : '✓  Save'}</Text>
+            <Text style={s.saveBtnText}>{saving ? 'Saving…' : 'Add transaction'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {showDatePicker && (
-        <View style={s.datePickerWrap}>
-          <DateTimePicker
-            value={new Date(date + 'T12:00:00')}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleDateChange}
-          />
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity style={s.datePickerDoneBtn} onPress={() => setShowDatePicker(false)}>
-              <Text style={s.datePickerDoneText}>Done</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      <DatePickerModal
+        visible={showDatePicker}
+        value={date}
+        onChange={setDate}
+        onClose={() => setShowDatePicker(false)}
+      />
       <BottomSheetPicker
         visible={showCatPicker}
         title="Select category"
@@ -270,70 +257,41 @@ export default function AddTransactionScreen({ onClose, defaultType = 'expense' 
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: colors.bg.elevated },
-  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border.default },
-  screenLabel:  { fontSize: 11, color: colors.accent.primary, letterSpacing: 1.2, fontWeight: '600' },
-  closeBtn:     { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.bg.tertiary, alignItems: 'center', justifyContent: 'center' },
+  container:    { flex: 1, backgroundColor: colors.bg.primary },
+  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 14, borderBottomWidth: 0, borderBottomColor: colors.border.default, minHeight: 76 },
+  screenLabel:  { fontSize: 19, color: colors.text.primary, letterSpacing: -0.3, fontWeight: '600' },
+  closeBtn:     { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.bg.tertiary, alignItems: 'center', justifyContent: 'center' },
   closeBtnText: { color: colors.text.secondary, fontSize: 12 },
 
-  body: { padding: 16, gap: 12, paddingBottom: 32 },
+  body: { padding: 24, gap: 16, paddingBottom: 32 },
 
-  typeToggle:     { flexDirection: 'row', backgroundColor: colors.bg.secondary, borderRadius: 8, padding: 2, borderWidth: 1, borderColor: colors.border.default },
-  typeBtn:        { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 6 },
-  typeBtnExpense: { backgroundColor: 'rgba(248,113,113,0.15)' },
-  typeBtnIncome:  { backgroundColor: 'rgba(52,211,153,0.15)' },
+  typeToggle:     { flexDirection: 'row', backgroundColor: colors.bg.secondary, borderRadius: 12, padding: 4, borderWidth: 0, borderColor: colors.border.default, gap: 6 },
+  typeBtn:        { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 9, minHeight: 40 },
+  typeBtnExpense: { backgroundColor: colors.bg.negative },
+  typeBtnIncome:  { backgroundColor: colors.accent.muted },
   typeBtnText:    { fontSize: 13, fontWeight: '600', color: colors.text.muted },
 
-  amountCard: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 14, borderWidth: 1.5,
-    paddingHorizontal: 20, paddingVertical: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-  },
-  amountInput: {
-    flex: 1, fontSize: 40, fontWeight: '700',
-    letterSpacing: -1, padding: 0,
-  },
-  amountCurrencyLabel: {
-    fontSize: 16, fontWeight: '600',
-    color: colors.text.secondary,
-    alignSelf: 'flex-end', paddingBottom: 6,
-  },
+  amountCard: { backgroundColor: 'transparent', borderRadius: 14, borderWidth: 0, paddingHorizontal: 20, paddingVertical: 24, flexDirection: 'column', alignItems: 'center', gap: 8 },
+  amountInput: { flex: 0, fontSize: 46, fontWeight: '700', letterSpacing: -1, padding: 0, textAlign: 'center', width: '100%', color: colors.text.primary },
+  amountCurrencyLabel: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, alignSelf: 'center', paddingBottom: 6 },
 
   // Note / description field
-  noteCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
+  noteCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg.secondary, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border.default, minHeight: 52 },
   noteIcon:  { fontSize: 15 },
-  noteInput: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text.primary,
-    padding: 0,
-  },
+  noteInput: { flex: 1, fontSize: 16, color: colors.text.primary, padding: 0 },
   noteClear: { fontSize: 13, color: colors.text.muted },
 
-  field:            { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg.secondary, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border.default },
+  field:            { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bg.secondary, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border.default, minHeight: 68 },
   fieldError:       { borderColor: colors.expense, borderWidth: 2 },
   fieldIcon:        { fontSize: 16 },
-  fieldLabel:       { fontSize: 11, color: colors.text.muted, width: 60 },
-  fieldValue:       { flex: 1, fontSize: 13, color: colors.text.primary, fontWeight: '500' },
+  fieldLabel:       { fontSize: 11, color: colors.text.secondary, width: undefined },
+  fieldValue:       { fontSize: 14, color: colors.text.primary, fontWeight: '500' },
   fieldPlaceholder: { color: colors.text.muted, fontWeight: '400' },
   fieldChevron:     { fontSize: 18, color: colors.text.muted },
 
-  datePickerWrap:    { backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: colors.border.default, paddingVertical: 8 },
-  datePickerDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
-  datePickerDoneText:{ fontSize: 14, fontWeight: '600', color: colors.accent.primary },
 
   errorMessage:  { fontSize: 12, color: colors.expense, marginTop: 6, marginLeft: 2 },
 
-  saveBtn:     { borderRadius: 12, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  saveBtn:     { borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   saveBtnText: { fontSize: 16, fontWeight: '700', color: '#0B0D12' },
 });

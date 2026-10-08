@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { colors, spacing, radius } from '../../theme';
@@ -25,7 +26,7 @@ export default function CategoryPicker({ categories, selected, onSelect }: Props
               borderColor: isSelected ? c.color : 'transparent',
               borderWidth: isSelected ? 2 : 0,
             }]}>
-              <Text style={styles.icon}>{c.icon}</Text>
+              <AppIcon name={c.icon} size={22} color={c.color} />
             </View>
             <Text style={[styles.name, isSelected && { color: c.color }]} numberOfLines={2}>
               {c.name.split(' ')[0]}
@@ -41,5 +42,5 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: 'center', padding: spacing.sm, maxWidth: '25%' },
   iconWrap: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   icon: { fontSize: 22 },
-  name: { fontSize: 10, color: colors.text.secondary, textAlign: 'center', lineHeight: 13 },
+  name: { fontSize: 11, color: colors.text.secondary, textAlign: 'center', lineHeight: 13 },
 });

@@ -142,12 +142,12 @@ async function importFromJSONFile(uri: string): Promise<ImportResult> {
           // Explicit ID — use INSERT OR IGNORE with explicit id column
           catResult = await db.runAsync(
             `INSERT OR IGNORE INTO categories (id, name, icon, color, type, is_default) VALUES (?, ?, ?, ?, ?, ?)`,
-            [cat.id, cat.name, cat.icon ?? '📦', cat.color ?? '#6B7280', cat.type ?? 'expense', 0]
+            [cat.id, cat.name, cat.icon ?? "package", cat.color ?? '#6B7280', cat.type ?? 'expense', 0]
           );
         } else {
           catResult = await db.runAsync(
             `INSERT OR IGNORE INTO categories (name, icon, color, type, is_default) VALUES (?, ?, ?, ?, ?)`,
-            [cat.name, cat.icon ?? '📦', cat.color ?? '#6B7280', cat.type ?? 'expense', 0]
+            [cat.name, cat.icon ?? "package", cat.color ?? '#6B7280', cat.type ?? 'expense', 0]
           );
         }
         if ((catResult.changes ?? 0) > 0) importedCats++;
@@ -216,7 +216,7 @@ async function importFromSQLiteFile(uri: string): Promise<ImportResult> {
         const name    = cat.name_ro || cat.name || 'Category';
         const result = await destDb.runAsync(
           `INSERT OR IGNORE INTO categories (name, icon, color, type, is_default) VALUES (?, ?, ?, ?, 0)`,
-          [name, cat.icon ?? '📦', cat.color ?? '#6B7280', typeStr]
+          [name, cat.icon ?? "package", cat.color ?? '#6B7280', typeStr]
         );
         if ((result.changes ?? 0) > 0) importedCats++;
       } catch (e: any) { errors.push(`Cat: ${e.message}`); }
@@ -254,7 +254,7 @@ async function importFromSQLiteFile(uri: string): Promise<ImportResult> {
         const catType  = tx.cat_type === 0 ? 'income' : 'expense';
         await destDb.runAsync(
           `INSERT OR IGNORE INTO categories (name, icon, color, type, is_default) VALUES (?, ?, ?, ?, 0)`,
-          [catName, tx.cat_icon ?? '📦', tx.cat_color ?? '#6B7280', catType]
+          [catName, tx.cat_icon ?? "package", tx.cat_color ?? '#6B7280', catType]
         );
         const catRow = await destDb.getFirstAsync<{ id: number }>(
           `SELECT id FROM categories WHERE name = ? AND type = ? LIMIT 1`,

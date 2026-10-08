@@ -23,17 +23,7 @@ export default function Card({ children, style, elevated, accent }: CardProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  elevated: {
-    backgroundColor: colors.bg.elevated,
-  },
-  accent: {
-    borderColor: colors.border.accent,
-  },
+  card: { backgroundColor: colors.bg.secondary, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border.default },
+  elevated: { backgroundColor: colors.bg.elevated },
+  accent: { borderColor: colors.border.accent },
 });

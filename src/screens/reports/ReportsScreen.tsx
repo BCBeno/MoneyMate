@@ -1,7 +1,11 @@
+import { useDisplayCurrency } from '../../hooks/useDisplayCurrency';
+import DateGroupHeader from '../../components/transactions/DateGroupHeader';
+import TransactionItem from '../../components/transactions/TransactionItem';
+import AppIcon from '../../components/common/AppIcon';
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList,
-  TouchableOpacity, Dimensions, Modal,
+  TouchableOpacity, useWindowDimensions, Modal, SectionList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -12,7 +16,7 @@ import {
 } from '../../database/repositories/transactionRepository';
 import { getCategories } from '../../database/repositories/categoryRepository';
 import {
-  calculateIncome, calculateExpenses, groupByCategory, groupByDate,
+  calculateIncome, calculateExpenses, groupByCategory, groupByDate, dailyExpenses,
 } from '../../utils/calculations';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
@@ -24,8 +28,6 @@ import AiAnalysisCard from '../../components/reports/AiAnalysisCard';
 
 type Period = '1L' | '3L' | '1An';
 
-const SCREEN_W = Dimensions.get('window').width;
-const CHART_W  = SCREEN_W - 48;
 
 // ── Pure JS date helpers — avoids date-fns timezone issues in RN ──────────────
 function getPeriodRange(period: Period): { dateFrom: string; dateTo: string } {
@@ -72,6 +74,8 @@ function getMonthRange(month: string): { dateFrom: string; dateTo: string } {
 
 // ── Bar chart ─────────────────────────────────────────────────────────────────
 function BarChart({ stats }: { stats: { month: string; income: number; expenses: number }[] }) {
+  const { width } = useWindowDimensions();
+  const CHART_W = Math.max(180, width - 84);
   if (stats.length === 0) return null;
 
   const H = 160, PL = 8, PR = 8, PT = 16, PB = 28;
@@ -85,19 +89,19 @@ function BarChart({ stats }: { stats: { month: string; income: number; expenses:
     <Svg width={CHART_W} height={H}>
       {[0, 0.5, 1].map((p, i) => (
         <Line key={i} x1={PL} y1={PT + cH * (1 - p)} x2={CHART_W - PR} y2={PT + cH * (1 - p)}
-          stroke={colors.border.default} strokeWidth={0.5} strokeDasharray="3 4" />
+          stroke={colors.border.default} strokeWidth={0.5}  />
       ))}
       {stats.map((d, i) => {
         const gx  = PL + i * colW + GAP;
         const iH  = Math.max(3, (d.income   / maxV) * cH);
         const eH  = Math.max(3, (d.expenses / maxV) * cH);
         let lbl = '';
-        try { lbl = format(new Date(d.month + '-15'), stats.length > 6 ? 'MM/yy' : 'MMM'); } catch {}
+        try { lbl = format(new Date(d.month + '-15'), 'MMM'); } catch {}
         return (
           <G key={i}>
             <Rect x={gx}          y={PT + cH - iH} width={bW} height={iH} rx={3} fill={colors.income}  opacity={0.85} />
             <Rect x={gx + bW + GAP} y={PT + cH - eH} width={bW} height={eH} rx={3} fill={colors.expense} opacity={0.85} />
-            <SvgText x={gx + bW + GAP / 2} y={H - 6} textAnchor="middle" fontSize={stats.length > 8 ? 7 : 8} fill={colors.text.muted}>{lbl}</SvgText>
+            <SvgText x={gx + bW + GAP / 2} y={H - 6} textAnchor="middle" fontSize={11} fill={colors.text.muted}>{i % Math.ceil(stats.length / 6) === 0 ? lbl : ''}</SvgText>
           </G>
         );
       })}
@@ -140,6 +144,8 @@ function DonutChart({ data }: { data: { color: string; pct: number }[] }) {
 interface CatFilter { categoryId: number; categoryName: string; categoryIcon: string; dateFrom: string; dateTo: string; }
 
 function CategoryModal({ filter, onClose, onDataChanged }: { filter: CatFilter; onClose: () => void; onDataChanged: () => void }) {
+  const { displayAmount } = useDisplayCurrency();
+  const [allTxs, setAllTxs] = useState<Transaction[]>([]);
   const [txs, setTxs]         = useState<Transaction[]>([]);
   const [selected, setSelected] = useState<Transaction | null>(null);
 
@@ -148,9 +154,10 @@ function CategoryModal({ filter, onClose, onDataChanged }: { filter: CatFilter; 
       const items = await getTransactions({
         dateFrom: filter.dateFrom,
         dateTo: filter.dateTo,
-        category_id: filter.categoryId,
+
       });
-      setTxs(items);
+      setAllTxs(items);
+      setTxs(items.filter(t => t.category_id === filter.categoryId));
     } catch (e) {
       console.error(e);
     }
@@ -160,37 +167,25 @@ function CategoryModal({ filter, onClose, onDataChanged }: { filter: CatFilter; 
     loadCategoryTransactions();
   }, [loadCategoryTransactions]);
 
-  const sections = Object.entries(groupByDate(txs)).sort(([a], [b]) => b.localeCompare(a));
+  const sections = Object.entries(groupByDate(txs)).sort(([a], [b]) => b.localeCompare(a)).map(([date, data]) => ({title: date, data}));
+  const totals = dailyExpenses(allTxs);
 
   return (
     <SafeAreaView style={cm.container} edges={['top', 'bottom']}>
       <View style={cm.header}>
-        <TouchableOpacity onPress={onClose} style={cm.backBtn}><Text style={cm.backText}>‹ Back</Text></TouchableOpacity>
+        <TouchableOpacity onPress={onClose} accessibilityLabel="Back" accessibilityRole="button" style={cm.backBtn}><AppIcon name="chevron-left" /></TouchableOpacity>
         <View style={cm.center}>
-          <Text style={cm.icon}>{filter.categoryIcon}</Text>
+          <AppIcon name={filter.categoryIcon} size={22} color={colors.text.secondary} />
           <Text style={cm.title} numberOfLines={1}>{filter.categoryName}</Text>
         </View>
         <View style={{ width: 72 }} />
       </View>
       {txs.length === 0
         ? <View style={cm.empty}><Text style={cm.emptyText}>No transactions</Text></View>
-        : <FlatList data={sections} keyExtractor={([d]) => d} contentContainerStyle={cm.list}
-            renderItem={({ item: [date, items] }) => (
-              <View style={cm.group}>
-                <Text style={cm.dateLabel}>{formatDate(date)}</Text>
-                {items.map(t => (
-                  <TouchableOpacity key={t.id} style={cm.row} onPress={() => setSelected(t)} activeOpacity={0.75}>
-                    <View style={cm.info}>
-                      <Text style={cm.name} numberOfLines={1}>{t.description || t.category_name}</Text>
-                      <Text style={cm.date}>{formatDate(t.date)}</Text>
-                    </View>
-                    <Text style={[cm.amount, { color: t.type === 'income' ? colors.income : colors.expense }]}>
-                      {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount_ron, 'RON', 2)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )} />
+        : <SectionList sections={sections} keyExtractor={t => String(t.id)} contentContainerStyle={cm.list} stickySectionHeadersEnabled={false}
+            renderSectionHeader={({section}) => <DateGroupHeader date={section.title} spent={displayAmount(totals[section.title] ?? 0)} />}
+            renderItem={({item}) => <TransactionItem transaction={item} onPress={() => setSelected(item)} />}
+          />
       }
       <Modal
         visible={selected !== null}
@@ -236,11 +231,11 @@ const cm = StyleSheet.create({
   title:     { fontSize: 15, fontWeight: '600', color: colors.text.primary },
   list:      { padding: 12, paddingBottom: 40 },
   group:     { marginBottom: 12 },
-  dateLabel: { fontSize: 10, fontWeight: '600', color: colors.text.muted, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
-  row:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(30,38,64,0.5)' },
+  dateLabel: { fontSize: 11, fontWeight: '600', color: colors.text.muted, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
+  row:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
   info:      { flex: 1 },
   name:      { fontSize: 13, fontWeight: '500', color: colors.text.primary },
-  date:      { fontSize: 10, color: colors.text.muted, marginTop: 1 },
+  date:      { fontSize: 11, color: colors.text.muted, marginTop: 1 },
   amount:    { fontSize: 13, fontWeight: '600' },
   empty:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 14, color: colors.text.muted },
@@ -249,6 +244,7 @@ const cm = StyleSheet.create({
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function ReportsScreen() {
   const { showAiAnalysis, currency, aiAnalysisLanguage } = useSettingsStore();
+  const { displayAmount } = useDisplayCurrency();
   const [period, setPeriod]       = useState<Period>('1L');
   const [transactions, setTxs]    = useState<any[]>([]);
   const [pieTransactions, setPieTransactions] = useState<any[]>([]);
@@ -305,10 +301,9 @@ export default function ReportsScreen() {
   const catDate = Object.entries(groupByCategory(pieTransactions))
     .map(([id, amount]) => {
       const cat = categories.find(c => c.id === parseInt(id, 10));
-      return { id: parseInt(id, 10), name: cat?.name ?? 'Other', icon: cat?.icon ?? '💰', color: cat?.color ?? '#666', amount: amount as number };
+      return { id: parseInt(id, 10), name: cat?.name ?? 'Other', icon: cat?.icon ?? "wallet", color: cat?.color ?? '#666', amount: amount as number };
     })
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 8);
+    .sort((a, b) => b.amount - a.amount);
 
   const totalCat   = catDate.reduce((s, c) => s + c.amount, 0);
   const catWithPct = catDate.map(c => ({ ...c, pct: totalCat > 0 ? (c.amount / totalCat) * 100 : 0 }));
@@ -332,18 +327,6 @@ export default function ReportsScreen() {
           ))}
         </View>
 
-        {/* Summary cards */}
-        <View style={s.summaryRow}>
-          <View style={[s.sumCard, { borderColor: colors.income + '44' }]}>
-            <Text style={s.sumLabel}>Income</Text>
-            <Text style={[s.sumVal, { color: colors.income }]}>{formatCurrency(income, 'RON', 0)}</Text>
-          </View>
-          <View style={[s.sumCard, { borderColor: colors.expense + '44' }]}>
-            <Text style={s.sumLabel}>Expenses</Text>
-            <Text style={[s.sumVal, { color: colors.expense }]}>{formatCurrency(expenses, 'RON', 0)}</Text>
-          </View>
-        </View>
-
         {loading && <Text style={s.loading}>Loading...</Text>}
 
         {/* Bar chart */}
@@ -352,8 +335,8 @@ export default function ReportsScreen() {
             <Text style={s.cardTitle}>Income vs Expenses</Text>
             <BarChart stats={stats} />
             <View style={s.legend}>
-              <View style={s.legendItem}><View style={[s.dot, { backgroundColor: colors.income }]} /><Text style={s.legendText}>Income</Text></View>
-              <View style={s.legendItem}><View style={[s.dot, { backgroundColor: colors.expense }]} /><Text style={s.legendText}>Expenses</Text></View>
+              <View style={s.legendItem}><View style={[s.dot, { backgroundColor: colors.income }]} /><Text style={s.legendText}>Income {displayAmount(income, 0)}</Text></View>
+              <View style={s.legendItem}><View style={[s.dot, { backgroundColor: colors.expense }]} /><Text style={s.legendText}>Expenses {displayAmount(expenses, 0)}</Text></View>
             </View>
           </View>
         )}
@@ -361,15 +344,15 @@ export default function ReportsScreen() {
         {/* Donut + category breakdown */}
         <View style={s.card}>
           <View style={s.cardHeaderRow}>
-            <Text style={s.cardTitle}>Expenses by Category</Text>
+            <Text style={s.cardTitle}>Where your money goes</Text>
+          </View>
             <TouchableOpacity
               style={s.monthFilterBtn}
               onPress={() => setMonthPickerVisible(true)}
               activeOpacity={0.8}
             >
-              <Text style={s.monthFilterText}>{pieMonthLabel}</Text>
+              <Text style={s.monthFilterText}>{pieMonthLabel}</Text><AppIcon name="chevron-down" size={18} />
             </TouchableOpacity>
-          </View>
           {catWithPct.length === 0 ? (
             <View style={s.pieEmpty}>
               <Text style={s.emptyText}>No expenses for this month</Text>
@@ -378,17 +361,7 @@ export default function ReportsScreen() {
             <>
               <View style={s.donutRow}>
                 <DonutChart data={catWithPct} />
-                <View style={s.donutLegend}>
-                  {catWithPct.map((c, i) => (
-                    <TouchableOpacity key={i} style={s.donutItem}
-                      onPress={() => setCatFilter({ categoryId: c.id, categoryName: c.name, categoryIcon: c.icon, dateFrom, dateTo })}
-                      activeOpacity={0.7}>
-                      <View style={[s.dot, { backgroundColor: c.color }]} />
-                      <Text style={s.donutText} numberOfLines={1}>{c.icon} {c.name}</Text>
-                      <Text style={[s.donutPct, { color: c.color }]}>{Math.round(c.pct)}%</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <View style={s.donutLegend}><Text style={s.sumLabel}>TOTAL SPENT</Text><Text style={s.totalSpent} numberOfLines={1} adjustsFontSizeToFit>{displayAmount(totalCat, 0)}</Text><Text style={s.legendText}>{catWithPct.length} categories</Text></View>
               </View>
 
               {/* Category bar list */}
@@ -397,15 +370,15 @@ export default function ReportsScreen() {
                   <TouchableOpacity key={i} style={s.catRow}
                     onPress={() => setCatFilter({ categoryId: c.id, categoryName: c.name, categoryIcon: c.icon, dateFrom, dateTo })}
                     activeOpacity={0.7}>
-                    <Text style={s.catIcon}>{c.icon}</Text>
+                    <AppIcon name={c.icon} size={22} color={c.color} />
                     <View style={s.catInfo}>
                       <View style={s.catLabelRow}>
                         <Text style={s.catName} numberOfLines={1}>{c.name}</Text>
-                        <Text style={s.catAmt}>{formatCurrency(c.amount, 'RON', 0)}</Text>
+                        <Text style={s.catAmt}>{displayAmount(c.amount, 0)}</Text>
                       </View>
                       <View style={s.track}><View style={[s.fill, { width: `${c.pct}%` as any, backgroundColor: c.color }]} /></View>
                     </View>
-                    <Text style={s.chevron}>›</Text>
+                    <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -414,7 +387,7 @@ export default function ReportsScreen() {
         </View>
 
         {!loading && transactions.length === 0 && (
-          <View style={s.empty}><Text style={s.emptyEmoji}>📊</Text><Text style={s.emptyText}>No transactions in this period</Text></View>
+          <View style={s.empty}><AppIcon name="bar-chart-2" size={32} color={colors.accent.primary} /><Text style={s.emptyText}>No transactions in this period</Text></View>
         )}
 
         {showAiAnalysis && <AiAnalysisCard currency={currency} language={aiAnalysisLanguage} />}
@@ -452,51 +425,45 @@ export default function ReportsScreen() {
 }
 
 const s = StyleSheet.create({
+  totalSpent: {fontSize: 20, fontWeight: '700', color: colors.text.primary, fontVariant: ['tabular-nums']},
   safe:        { flex: 1, backgroundColor: colors.bg.primary },
-  content:     { padding: 12, gap: 10, paddingBottom: 100 },
-  screenLabel: { fontSize: 11, color: colors.accent.primary, textTransform: 'uppercase', letterSpacing: 1.2, opacity: 0.85 },
+  content:     { padding: 24, gap: 16, paddingBottom: 32 },
+  screenLabel: { fontSize: 28, color: colors.text.primary, textTransform: 'none', letterSpacing: -0.6, opacity: 1, fontWeight: '700', marginTop: 20, marginBottom: 16 },
   loading:     { textAlign: 'center', fontSize: 12, color: colors.text.muted, paddingVertical: 8 },
 
-  periodRow:           { flexDirection: 'row', gap: 6 },
-  periodTab:           { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.default },
-  periodTabActive:     { backgroundColor: 'rgba(0,212,170,0.12)', borderColor: 'rgba(0,212,170,0.3)' },
+  periodRow:           { flexDirection: 'row', gap: 6, backgroundColor: colors.bg.secondary, padding: 4, borderRadius: 12 },
+  periodTab:           { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 9, backgroundColor: colors.bg.secondary, borderWidth: 0, borderColor: colors.border.default, minHeight: 40 },
+  periodTabActive:     { backgroundColor: colors.accent.muted, borderColor: 'rgba(0,212,170,0.3)' },
   periodTabText:       { fontSize: 12, fontWeight: '500', color: colors.text.muted },
   periodTabTextActive: { color: colors.accent.primary, fontWeight: '600' },
 
   summaryRow: { flexDirection: 'row', gap: 8 },
   sumCard:    { flex: 1, backgroundColor: colors.bg.secondary, borderRadius: 10, padding: 14, borderWidth: 1 },
-  sumLabel:   { fontSize: 10, color: colors.text.secondary, marginBottom: 5 },
+  sumLabel:   { fontSize: 11, color: colors.text.secondary, marginBottom: 5 },
   sumVal:     { fontSize: 20, fontWeight: '700' },
 
-  card:      { backgroundColor: colors.bg.secondary, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border.default, gap: 10 },
-  cardTitle: { fontSize: 12, fontWeight: '600', color: colors.text.secondary },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  monthFilterBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: colors.bg.elevated,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  monthFilterText: { fontSize: 11, color: colors.text.primary, fontWeight: '600' },
+  card:      { backgroundColor: colors.bg.secondary, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: colors.border.default, gap: 12 },
+  cardTitle: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
+  monthFilterBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, paddingHorizontal: 0, paddingVertical: 6, borderRadius: 999, backgroundColor: 'transparent', borderWidth: 0, borderColor: colors.border.default, minHeight: 44 },
+  monthFilterText: { fontSize: 12, color: colors.text.secondary, fontWeight: '600' },
 
-  legend:     { flexDirection: 'row', gap: 16, justifyContent: 'center' },
+  legend:     { flexWrap: 'wrap', flexDirection: 'row', gap: 16, justifyContent: 'center' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendText: { fontSize: 10, color: colors.text.secondary },
+  legendText: { fontSize: 11, color: colors.text.secondary },
   dot:        { width: 8, height: 8, borderRadius: 4 },
 
-  donutRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  donutRow:    { flexDirection: 'row', alignItems: 'center', gap: 18 },
   donutLegend: { flex: 1, gap: 4 },
   donutItem:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 2 },
   donutText:   { flex: 1, fontSize: 11, color: colors.text.secondary },
   donutPct:    { fontSize: 11, fontWeight: '600', minWidth: 30, textAlign: 'right' },
 
   catList:    { gap: 2, borderTopWidth: 1, borderTopColor: colors.border.default, paddingTop: 8 },
-  catRow:     { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
+  catRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6, minHeight: 52 },
   catIcon:    { fontSize: 17, width: 24, textAlign: 'center' },
   catInfo:    { flex: 1, gap: 4 },
-  catLabelRow:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  catLabelRow:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   catName:    { fontSize: 12, fontWeight: '500', color: colors.text.primary, flex: 1 },
   catAmt:     { fontSize: 12, fontWeight: '600', color: colors.text.primary },
   track:      { height: 4, backgroundColor: colors.bg.elevated, borderRadius: 2, overflow: 'hidden' },

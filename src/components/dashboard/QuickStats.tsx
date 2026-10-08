@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, radius } from '../../theme';
@@ -14,17 +15,17 @@ export default function QuickStats({ savingsRate, totalTransactions, avgExpense,
   return (
     <View style={styles.row}>
       <View style={styles.stat}>
-        <Text style={styles.emoji}>📈</Text>
+        <AppIcon name="trending-up" size={20} color={colors.text.secondary} />
         <Text style={styles.value}>{savingsRate.toFixed(0)}%</Text>
         <Text style={styles.label}>Savings</Text>
       </View>
       <View style={styles.stat}>
-        <Text style={styles.emoji}>🔢</Text>
+        <AppIcon name="hash" size={20} color={colors.text.secondary} />
         <Text style={styles.value}>{totalTransactions}</Text>
         <Text style={styles.label}>Transactions</Text>
       </View>
       <View style={styles.stat}>
-        <Text style={styles.emoji}>📉</Text>
+        <AppIcon name="trending-down" size={20} color={colors.text.secondary} />
         <Text style={styles.value}>{formatCurrency(avgExpense, symbol, 0)}</Text>
         <Text style={styles.label}>Avg/day</Text>
       </View>
@@ -33,15 +34,8 @@ export default function QuickStats({ savingsRate, totalTransactions, avgExpense,
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row', gap: spacing.sm,
-    marginHorizontal: spacing.lg, marginTop: spacing.md,
-  },
-  stat: {
-    flex: 1, backgroundColor: colors.bg.secondary, borderRadius: radius.md,
-    padding: spacing.md, alignItems: 'center',
-    borderWidth: 1, borderColor: colors.border.default,
-  },
+  row: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.lg, marginTop: spacing.md },
+  stat: { flex: 1, backgroundColor: colors.bg.secondary, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: colors.border.default },
   emoji: { fontSize: 18, marginBottom: 4 },
   value: { fontSize: 15, fontWeight: '700', color: colors.text.primary, marginBottom: 2 },
   label: { fontSize: 11, color: colors.text.muted, textAlign: 'center' },

@@ -17,15 +17,6 @@ export default function LoadingSpinner({ message, size = 'large' }: LoadingSpinn
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.bg.primary,
-  },
-  message: {
-    fontSize: 14,
-    color: colors.text.secondary,
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bg.primary },
+  message: { fontSize: 14, color: colors.text.secondary },
 });

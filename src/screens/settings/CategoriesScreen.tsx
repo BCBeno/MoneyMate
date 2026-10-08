@@ -1,7 +1,9 @@
+import { CATEGORY_ICONS as ICONS, ICON_COLORS as COLOR_PALETTE, resolveIconName } from '../../constants/icons';
+import AppIcon from '../../components/common/AppIcon';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Modal, TextInput, ScrollView, Alert,
+  Modal, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
@@ -14,16 +16,8 @@ import {
 import { Category } from '../../constants/categories';
 import { useTransactionsStore } from '../../store/slices/transactionsSlice';
 
-const ICONS = [
-  '🍽️','🚗','💡','❤️','🎬','🛍️','📚','📈','💼','💻','➕','🏠','✈️',
-  '📱','🎓','💍','🏖️','💰','🏋️','🎸','📷','🎯','🐾','🎁','🧴','🛒',
-  '⚽','🎮','🍺','☕','🏥','🐶','🌿','🔧','📦','🎪','🚀','🎨',
-];
-const COLOR_PALETTE = [
-  '#F97316','#3B82F6','#8B5CF6','#EF4444','#EC4899','#F59E0B',
-  '#06B6D4','#10B981','#34D399','#6B7280','#14B8A6','#A855F7',
-  '#E11D48','#0EA5E9','#84CC16','#F43F5E',
-];
+
+
 
 interface Props { onClose: () => void; }
 
@@ -36,8 +30,8 @@ export default function CategoriesScreen({ onClose }: Props) {
 
   // Form state
   const [newName, setNewName]   = useState('');
-  const [newIcon, setNewIcon]   = useState('📦');
-  const [newColor, setNewColor] = useState('#F97316');
+  const [newIcon, setNewIcon]   = useState("package");
+  const [newColor, setNewColor] = useState(colors.warning);
   const [formType, setFormType] = useState<'expense' | 'income'>('expense');
   const [saving, setSaving]     = useState(false);
   const [nameError, setNameError] = useState('');
@@ -54,8 +48,8 @@ export default function CategoriesScreen({ onClose }: Props) {
   const resetForm = (nextType?: 'expense' | 'income') => {
     setEditingCategory(null);
     setNewName('');
-    setNewIcon('📦');
-    setNewColor('#F97316');
+    setNewIcon("package");
+    setNewColor(colors.warning);
     setFormType(nextType ?? tab);
   };
 
@@ -67,7 +61,7 @@ export default function CategoriesScreen({ onClose }: Props) {
   const openEditForm = (cat: Category) => {
     setEditingCategory(cat);
     setNewName(cat.name);
-    setNewIcon(cat.icon);
+    setNewIcon(resolveIconName(cat.icon));
     setNewColor(cat.color);
     setFormType(cat.type);
     setShowForm(true);
@@ -141,8 +135,8 @@ export default function CategoriesScreen({ onClose }: Props) {
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={onClose} style={s.backBtn}>
-          <Text style={s.backText}>‹ Back</Text>
+        <TouchableOpacity onPress={onClose} accessibilityLabel="Back" accessibilityRole="button" style={s.backBtn}>
+          <AppIcon name="chevron-left" />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Categories</Text>
         <TouchableOpacity onPress={openAddForm} style={s.addBtn}>
@@ -170,24 +164,27 @@ export default function CategoriesScreen({ onClose }: Props) {
         renderItem={({ item: cat }) => (
           <TouchableOpacity style={s.catRow} onPress={() => openEditForm(cat)} activeOpacity={0.75}>
             <View style={[s.catIcon, { backgroundColor: cat.color + '26' }]}>
-              <Text style={s.catEmoji}>{cat.icon}</Text>
+              <AppIcon name={cat.icon} size={22} color={cat.color} />
             </View>
             <Text style={s.catName}>{cat.name}</Text>
             {cat.is_default === 1 ? <Text style={s.defaultBadge}>Default</Text> : null}
-            <Text style={s.chevron}>›</Text>
+            <AppIcon name="chevron-right" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
         )}
       />
 
       {/* Category form modal */}
-      <Modal visible={showForm} animationType="slide" transparent onRequestClose={closeForm}>
-        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={closeForm} />
-        <SafeAreaView style={s.sheet} edges={['bottom']}>
-          <View style={s.sheetHandle} />
-          <Text style={s.sheetTitle}>
+      <Modal visible={showForm} animationType="slide" onRequestClose={closeForm}>
+
+        <SafeAreaView style={s.container} edges={['top', 'bottom']}>
+          <View style={s.header}><TouchableOpacity onPress={closeForm} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Back"><AppIcon name="chevron-left" /></TouchableOpacity>
+          <Text style={[s.sheetTitle, {flex: 1, textAlign: 'center'}]} numberOfLines={2}>
             {editingCategory ? 'Edit category' : `New ${formType === 'expense' ? 'Expense' : 'Income'} category`}
           </Text>
 
+          </View>
+          <KeyboardAvoidingView style={{flex: 1}} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView contentContainerStyle={s.formBody} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {/* Type picker */}
           <View style={s.tabRow}>
             <TouchableOpacity style={[s.tabBtn, formType === 'expense' && s.tabBtnActive]} onPress={() => setFormType('expense')}>
@@ -200,7 +197,7 @@ export default function CategoriesScreen({ onClose }: Props) {
 
           {/* Preview */}
           <View style={[s.preview, { backgroundColor: newColor + '22', borderColor: newColor }]}>
-            <Text style={s.previewEmoji}>{newIcon}</Text>
+            <AppIcon name={newIcon} size={32} color={newColor} />
             <Text style={s.previewName}>{newName || 'Category'}</Text>
           </View>
 
@@ -227,9 +224,9 @@ export default function CategoriesScreen({ onClose }: Props) {
               <TouchableOpacity
                 key={ic}
                 style={[s.iconBtn, newIcon === ic && { borderColor: newColor, backgroundColor: newColor + '22' }]}
-                onPress={() => setNewIcon(ic)}
+                onPress={() => setNewIcon(ic)} accessibilityLabel={ic} accessibilityRole="button" accessibilityState={{selected: newIcon === ic}}
               >
-                <Text style={s.iconBtnText}>{ic}</Text>
+                <AppIcon name={ic} size={22} color={newColor} />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -237,7 +234,7 @@ export default function CategoriesScreen({ onClose }: Props) {
           {/* Color picker */}
           <Text style={s.pickerLabel}>COLOR</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-            {COLOR_PALETTE.map(c => (
+            {[...COLOR_PALETTE, ...(COLOR_PALETTE.includes(newColor) ? [] : [newColor])].map(c => (
               <TouchableOpacity
                 key={c}
                 style={[s.colorBtn, { backgroundColor: c }, newColor === c && s.colorBtnSelected]}
@@ -259,6 +256,7 @@ export default function CategoriesScreen({ onClose }: Props) {
               <Text style={s.deleteModalBtnText}>Delete category</Text>
             </TouchableOpacity>
           ) : null}
+        </ScrollView></KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -266,53 +264,54 @@ export default function CategoriesScreen({ onClose }: Props) {
 }
 
 const s = StyleSheet.create({
+  formBody: {padding: 24, gap: 16, paddingBottom: 40},
   container: { flex: 1, backgroundColor: colors.bg.primary },
 
-  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border.default },
-  backBtn:     { minWidth: 72 },
+  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 14, borderBottomWidth: 0, borderBottomColor: colors.border.default, minHeight: 76 },
+  backBtn:     { minWidth: 44, minHeight: 44, justifyContent: 'center' },
   backText:    { fontSize: 14, color: colors.accent.primary },
-  headerTitle: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
+  headerTitle: { fontSize: 19, fontWeight: '600', color: colors.text.primary, flex: 1, textAlign: 'center' },
   addBtn:      { backgroundColor: colors.accent.primary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6, minWidth: 72, alignItems: 'flex-end' },
   addBtnText:  { color: colors.bg.primary, fontWeight: '700', fontSize: 12 },
 
   tabRow:         { flexDirection: 'row', margin: 12, backgroundColor: colors.bg.secondary, borderRadius: 8, padding: 2, borderWidth: 1, borderColor: colors.border.default },
   tabBtn:         { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  tabBtnActive:   { backgroundColor: 'rgba(0,212,170,0.12)' },
+  tabBtnActive:   { backgroundColor: colors.accent.muted },
   tabBtnText:     { fontSize: 13, fontWeight: '500', color: colors.text.muted },
   tabBtnTextActive:{ color: colors.accent.primary, fontWeight: '600' },
 
   list:        { paddingHorizontal: 12, paddingBottom: 40 },
   emptyText:   { textAlign: 'center', color: colors.text.muted, fontSize: 13, paddingVertical: 32 },
 
-  catRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(30,38,64,0.5)' },
+  catRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
   catIcon:      { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   catEmoji:     { fontSize: 18 },
   catName:      { flex: 1, fontSize: 14, fontWeight: '500', color: colors.text.primary },
-  defaultBadge: { fontSize: 10, color: colors.text.muted, backgroundColor: colors.bg.tertiary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
+  defaultBadge: { fontSize: 11, color: colors.text.muted, backgroundColor: colors.bg.tertiary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   chevron:      { fontSize: 20, color: colors.text.muted, paddingLeft: 6 },
 
   // Sheet
-  overlay:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg.elevated, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 16, gap: 12, borderTopWidth: 1, borderTopColor: colors.border.default },
+  overlay:     { backgroundColor: colors.overlay },
+  sheet:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg.elevated, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 16, gap: 12, borderTopWidth: 1, borderTopColor: colors.border.default },
   sheetHandle: { width: 36, height: 4, backgroundColor: colors.border.default, borderRadius: 2, alignSelf: 'center', marginBottom: 4 },
-  sheetTitle:  { fontSize: 16, fontWeight: '600', color: colors.text.primary },
+  sheetTitle:  { fontSize: 20, fontWeight: '600', color: colors.text.primary },
 
-  preview:     { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1 },
+  preview:     { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 20, borderRadius: 16, borderWidth: 1, backgroundColor: colors.bg.secondary, borderColor: colors.border.default },
   previewEmoji:{ fontSize: 24 },
   previewName: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
 
-  input:       { backgroundColor: colors.bg.tertiary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 15, paddingHorizontal: 14, height: 48 },
+  input:       { backgroundColor: colors.bg.secondary, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, color: colors.text.primary, fontSize: 16, paddingHorizontal: 14, height: 48, minHeight: 52 },
   inputError:  { borderWidth: 2, borderColor: colors.expense },
   errorMessage: { fontSize: 12, color: colors.expense, marginTop: 6, marginLeft: 2 },
 
-  pickerLabel: { fontSize: 10, fontWeight: '600', color: colors.text.muted, letterSpacing: 0.8 },
-  iconBtn:     { width: 44, height: 44, borderRadius: 10, borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
+  pickerLabel: { fontSize: 11, fontWeight: '600', color: colors.text.secondary, letterSpacing: 0.8 },
+  iconBtn:     { width: 52, height: 60, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
   iconBtnText: { fontSize: 22 },
   colorBtn:    { width: 34, height: 34, borderRadius: 17, marginRight: 8 },
   colorBtnSelected: { borderWidth: 3, borderColor: '#fff' },
 
-  saveBtn:     { backgroundColor: colors.accent.primary, borderRadius: 12, height: 50, alignItems: 'center', justifyContent: 'center' },
+  saveBtn:     { backgroundColor: colors.accent.primary, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center' },
   saveBtnText: { fontSize: 15, fontWeight: '700', color: colors.bg.primary },
-  deleteModalBtn: { borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(239,68,68,0.4)', backgroundColor: 'rgba(239,68,68,0.08)' },
-  deleteModalBtnText: { fontSize: 14, fontWeight: '700', color: '#F87171' },
+  deleteModalBtn: { borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 0, borderColor: 'rgba(239,68,68,0.4)', backgroundColor: colors.bg.negative },
+  deleteModalBtnText: { fontSize: 14, fontWeight: '700', color: colors.expense },
 });

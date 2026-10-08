@@ -41,3 +41,20 @@ export function groupByDate(transactions: Transaction[]): Record<string, Transac
     return acc;
   }, {} as Record<string, Transaction[]>);
 }
+
+/** Pass the unfiltered list so search/type filters never change a day's spending. */
+export function dailyExpenses(transactions: Transaction[]): Record<string, number> {
+  return dailyTotals(transactions, 'expense');
+}
+
+export function dailyIncome(transactions: Transaction[]): Record<string, number> {
+  return dailyTotals(transactions, 'income');
+}
+
+function dailyTotals(transactions: Transaction[], type: Transaction['type']): Record<string, number> {
+  return transactions.reduce((totals, t) => {
+    const date = t.date.substring(0, 10);
+    if (t.type === type) totals[date] = (totals[date] ?? 0) + t.amount_ron;
+    return totals;
+  }, {} as Record<string, number>);
+}

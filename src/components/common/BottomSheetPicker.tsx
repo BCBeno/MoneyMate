@@ -1,13 +1,15 @@
+import AppIcon from './AppIcon';
 /**
  * Generic bottom-sheet picker.
  * Renders a list of items; the selected one is highlighted.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Modal, Pressable, FlatList,
+  FlatList, Keyboard, useWindowDimensions,
 } from 'react-native';
 import { colors } from '../../theme';
+import Modal from './Modal';
 
 export interface PickerItem {
   key: string;
@@ -29,17 +31,18 @@ interface Props {
 export default function BottomSheetPicker({
   visible, title, items, selectedKey, onSelect, onClose,
 }: Props) {
+  const { height } = useWindowDimensions();
+  useEffect(() => {
+    if (visible) Keyboard.dismiss();
+  }, [visible]);
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={s.overlay} onPress={onClose} />
-      <View style={s.sheet}>
-        <View style={s.handle} />
-        <Text style={s.title}>{title}</Text>
+    <Modal visible={visible} title={title} onClose={onClose}>
         <FlatList
           data={items}
           keyExtractor={item => item.key}
           showsVerticalScrollIndicator={false}
-          style={{ maxHeight: 360 }}
+          keyboardShouldPersistTaps="handled"
+          style={{ maxHeight: height * 0.6 }}
           renderItem={({ item }) => {
             const selected = item.key === selectedKey;
             return (
@@ -47,10 +50,11 @@ export default function BottomSheetPicker({
                 style={[s.item, selected && s.itemSelected]}
                 onPress={() => { onSelect(item.key); onClose(); }}
                 activeOpacity={0.7}
+                accessibilityRole="button" accessibilityLabel={item.label} accessibilityState={{selected}}
               >
                 {item.icon && (
                   <View style={[s.itemIconWrap, { backgroundColor: (item.color ?? colors.accent.primary) + '22' }]}>
-                    <Text style={s.itemIcon}>{item.icon}</Text>
+                    <AppIcon name={item.icon} size={22} color={colors.text.secondary} />
                   </View>
                 )}
                 <View style={s.itemText}>
@@ -61,27 +65,22 @@ export default function BottomSheetPicker({
                     <Text style={s.itemSublabel}>{item.sublabel}</Text>
                   )}
                 </View>
-                {selected && <Text style={s.check}>✓</Text>}
+                {selected && <AppIcon name="check" size={20} color={colors.accent.primary} />}
               </TouchableOpacity>
             );
           }}
         />
-      </View>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
-  overlay:       { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet:         { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg.elevated, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40, borderTopWidth: 1, borderTopColor: colors.border.default },
-  handle:        { width: 36, height: 4, backgroundColor: colors.border.default, borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
-  title:         { fontSize: 15, fontWeight: '600', color: colors.text.primary, marginBottom: 12 },
-  item:          { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 10, gap: 12, marginBottom: 2 },
+  item:          { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 10, gap: 12, marginBottom: 2, minHeight: 68 },
   itemSelected:  { backgroundColor: 'rgba(0,212,170,0.08)' },
-  itemIconWrap:  { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  itemIconWrap:  { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg.tertiary },
   itemIcon:      { fontSize: 18 },
   itemText:      { flex: 1 },
   itemLabel:     { fontSize: 14, fontWeight: '500', color: colors.text.primary },
-  itemSublabel:  { fontSize: 11, color: colors.text.muted, marginTop: 1 },
+  itemSublabel:  { fontSize: 12, color: colors.text.muted, marginTop: 1 },
   check:         { fontSize: 16, color: colors.accent.primary, fontWeight: '700' },
 });

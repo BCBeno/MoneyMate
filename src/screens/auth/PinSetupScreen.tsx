@@ -1,3 +1,4 @@
+import AppIcon from '../../components/common/AppIcon';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,7 +53,7 @@ export default function PinSetupScreen({ onDone }: { onDone?: () => void }) {
           <View key={ri} style={s.row}>
             {row.map((d, di) => (
               <TouchableOpacity key={di} style={s.key} onPress={() => handleDigit(d)} activeOpacity={0.7}>
-                <Text style={s.keyText}>{d}</Text>
+                {d === '⌫' ? <AppIcon name="delete" /> : <Text style={s.keyText}>{d}</Text>}
               </TouchableOpacity>
             ))}
           </View>
@@ -63,15 +64,15 @@ export default function PinSetupScreen({ onDone }: { onDone?: () => void }) {
 }
 
 const s = StyleSheet.create({
-  container:  { flex:1, backgroundColor:colors.bg.primary, alignItems:'center', justifyContent:'center', gap:spacing.xl },
-  title:      { fontSize:26, fontWeight:'700', color:colors.text.primary },
-  sub:        { fontSize:14, color:colors.text.secondary },
-  dots:       { flexDirection:'row', gap:16, marginVertical:spacing.xl },
-  dot:        { width:16, height:16, borderRadius:8, borderWidth:2, borderColor:colors.accent.primary },
-  errorText:  { fontSize:13, color:colors.expense, fontWeight:'600' },
-  dotFilled:  { backgroundColor:colors.accent.primary },
-  pad:        { gap:spacing.md },
-  row:        { flexDirection:'row', gap:spacing.md },
-  key:        { width:80, height:80, borderRadius:40, backgroundColor:colors.bg.secondary, alignItems:'center', justifyContent:'center', borderWidth:1, borderColor:colors.border.default },
-  keyText:    { fontSize:24, fontWeight:'500', color:colors.text.primary },
+  container:  { flex: 1, backgroundColor: colors.bg.primary, alignItems: 'center', justifyContent: 'center', gap: spacing.xl, paddingHorizontal: 24 },
+  title:      { fontSize: 26, fontWeight: '700', color: colors.text.primary },
+  sub:        { fontSize: 14, color: colors.text.secondary },
+  dots:       { flexDirection: 'row', gap: 16, marginVertical: spacing.xl },
+  dot:        { width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: colors.accent.primary },
+  errorText:  { fontSize: 13, color: colors.expense, fontWeight: '600' },
+  dotFilled:  { backgroundColor: colors.accent.primary },
+  pad:        { gap: spacing.md },
+  row:        { flexDirection: 'row', gap: spacing.md },
+  key:        { width: 80, height: 64, borderRadius: 16, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border.default },
+  keyText:    { fontSize: 24, fontWeight: '500', color: colors.text.primary },
 });

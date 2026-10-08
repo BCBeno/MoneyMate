@@ -1,3 +1,4 @@
+import AppIcon from '../common/AppIcon';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, radius } from '../../theme';
@@ -30,12 +31,12 @@ export default function GoalCard({ goal, onPress }: Props) {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.header}>
         <View style={[styles.iconWrap, { backgroundColor: goal.color + '22' }]}>
-          <Text style={styles.icon}>{goal.icon}</Text>
+          <AppIcon name={goal.icon} size={22} color={colors.text.secondary} />
         </View>
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>{goal.name}</Text>
           {daysLeft !== null && daysLeft > 0 && (
-            <Text style={styles.deadline}>⏳ {daysLeft} days left</Text>
+            <Text style={styles.deadline}>{daysLeft} days left</Text>
           )}
         </View>
         <Badge label={statusLabel} variant={statusVariant} />
@@ -51,11 +52,7 @@ export default function GoalCard({ goal, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.bg.secondary, borderRadius: radius.lg,
-    padding: spacing.lg, marginHorizontal: spacing.lg, marginBottom: spacing.sm,
-    borderWidth: 1, borderColor: colors.border.default,
-  },
+  card: { backgroundColor: colors.bg.secondary, borderRadius: radius.lg, padding: spacing.lg, marginHorizontal: spacing.lg, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border.default },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   iconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   icon: { fontSize: 22 },

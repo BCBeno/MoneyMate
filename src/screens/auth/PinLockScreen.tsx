@@ -1,3 +1,4 @@
+import AppIcon from '../../components/common/AppIcon';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Vibration, AppState, type AppStateStatus } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -147,7 +148,7 @@ export default function PinLockScreen() {
                 activeOpacity={0.7}
                 disabled={cooldown > 0}
               >
-                <Text style={s.keyText}>{d}</Text>
+                {d === '⌫' ? <AppIcon name="delete" /> : <Text style={s.keyText}>{d}</Text>}
               </TouchableOpacity>
             ))}
           </View>
@@ -155,7 +156,7 @@ export default function PinLockScreen() {
       </View>
       {biometricEnabled && (
         <TouchableOpacity onPress={tryBiometric} style={s.bioBtn}>
-          <Text style={s.bioText}>🔐 Use biometrics</Text>
+          <AppIcon name="fingerprint" color={colors.accent.primary} /><Text style={s.bioText}>Use biometrics</Text>
         </TouchableOpacity>
       )}
     </SafeAreaView>
@@ -163,8 +164,8 @@ export default function PinLockScreen() {
 }
 
 const s = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: colors.bg.primary, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
-  title:       { fontSize: 28, fontWeight: '700', color: colors.accent.primary },
+  container:   { flex: 1, backgroundColor: colors.bg.primary, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, paddingHorizontal: 24 },
+  title:       { fontSize: 28, fontWeight: '700', color: colors.text.primary },
   sub:         { fontSize: 14, color: colors.text.secondary },
   dots:        { flexDirection: 'row', gap: 16, marginVertical: spacing.md },
   dot:         { width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: colors.accent.primary },
@@ -173,9 +174,9 @@ const s = StyleSheet.create({
   error:       { fontSize: 13, color: colors.expense, textAlign: 'center', paddingHorizontal: spacing.xl },
   pad:         { gap: spacing.md },
   row:         { flexDirection: 'row', gap: spacing.md },
-  key:         { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border.default },
+  key:         { width: 80, height: 64, borderRadius: 16, backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border.default },
   keyDisabled: { opacity: 0.3 },
   keyText:     { fontSize: 24, fontWeight: '500', color: colors.text.primary },
-  bioBtn:      { marginTop: spacing.md, padding: spacing.md },
+  bioBtn:      { marginTop: spacing.md, padding: spacing.md, flexDirection: 'row', gap: 8, minHeight: 44, alignItems: 'center' },
   bioText:     { fontSize: 15, color: colors.accent.primary },
 });

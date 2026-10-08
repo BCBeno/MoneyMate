@@ -22,3 +22,7 @@ export function formatCurrency(
 
   return symbol ? `${formatted} ${symbol}` : formatted;
 }
+
+export function formatBaseCurrency(amountRON: number, currency: string, rate: number, decimals = 2): string {
+  return `${amountRON < 0 ? '−' : ''}${formatCurrency(amountRON / rate, currency, decimals)}`;
+}
